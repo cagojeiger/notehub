@@ -38,7 +38,7 @@ jobs:
   version:
     name: Validate source and release plan
     if: github.repository_id == '1437742487' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     outputs:
       version: ${{ steps.plan.outputs.version }}
@@ -120,7 +120,7 @@ jobs:
       matrix:
         include:
           - platform: linux/amd64
-            runner: ubuntu-latest
+            runner: ubuntu-26.04
             arch: amd64
           - platform: linux/arm64
             runner: ubuntu-24.04-arm
@@ -216,7 +216,7 @@ jobs:
     name: Trivy image gate linux/${{ matrix.arch }}
     needs: [version, build]
     if: needs.version.outputs.should_release == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 20
     permissions:
       contents: read
@@ -458,7 +458,7 @@ jobs:
     name: Publish verified release
     needs: [version, build, scan, cli]
     if: needs.version.outputs.should_release == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     permissions:
       contents: write

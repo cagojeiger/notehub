@@ -10,13 +10,24 @@ permissions:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
       - name: Checkout public workflows
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - name: Require explicit Ubuntu runner versions
+        shell: bash
+        run: |
+          floating_label='ubuntu-'"latest"
+          if git grep -nF "$floating_label" -- .github/workflows; then
+            echo '::error::Use an explicit Ubuntu runner version'
+            exit 1
+          else
+            test "$?" -eq 1
+          fi
 
       - name: Validate workflow syntax with official actionlint
         uses: docker://rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 # 1.7.12

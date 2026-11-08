@@ -1,4 +1,4 @@
-name: "[CI][PR·Main] Workflow Validation"
+name: "[ci][pr·main][gh-linux] Workflow Validation"
 
 on:
   pull_request:

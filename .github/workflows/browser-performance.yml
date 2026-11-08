@@ -50,7 +50,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: cagojeiger/notehub-core
-          ref: 5b6a0fadd351db5f3dd20d1002a2f51e2eb21ded
+          ref: 03c10839111189f8b5de0e34bf46e34f8909ea09
           token: ${{ steps.core-token.outputs.token }}
           path: .control
           fetch-depth: 1
@@ -136,7 +136,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: cagojeiger/notehub-core
-          ref: 5b6a0fadd351db5f3dd20d1002a2f51e2eb21ded
+          ref: 03c10839111189f8b5de0e34bf46e34f8909ea09
           token: ${{ steps.core-token.outputs.token }}
           path: .control
           fetch-depth: 1

@@ -803,7 +803,12 @@ jobs:
 
       - name: Prepare Compose environment
         shell: private_run.sh {0}
-        run: cp .env.example .env
+        run: |
+          if [[ -f deploy/.env.example ]]; then
+            cp deploy/.env.example .env
+          else
+            cp .env.example .env
+          fi
 
       - name: Verify PostgreSQL volume upgrade and persistence
         shell: private_run.sh {0}

@@ -1,4 +1,4 @@
-name: "[Release][Core 요청] Build & Publish"
+name: "[release][core-request][gh-multi] Build & Publish"
 
 on:
   workflow_dispatch:

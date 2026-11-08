@@ -1,4 +1,4 @@
-name: Validate workflows
+name: "[CI][PR·Main] Workflow Validation"
 
 on:
   pull_request:

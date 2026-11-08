@@ -19,7 +19,7 @@ jobs:
       contents: read
       actions: read
     if: github.repository_id == '1437742487' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 20
     outputs:
       tested_sha: ${{ steps.request.outputs.tested_sha }}
@@ -97,7 +97,7 @@ jobs:
       actions: read
     needs: gate
     name: Resolve latest image
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     outputs:
       ref: ${{ steps.image.outputs.ref }}
@@ -165,7 +165,7 @@ jobs:
   scan:
     name: Trivy linux/${{ matrix.arch }}
     needs: [gate, image]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 20
     permissions:
       actions: read
@@ -291,7 +291,7 @@ jobs:
     name: Publish security findings
     needs: [gate, scan]
     if: ${{ always() && needs.gate.result == 'success' && needs.gate.outputs.source_event != 'pull_request' && needs.scan.result != 'cancelled' && needs.scan.result != 'skipped' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       actions: read
       contents: read

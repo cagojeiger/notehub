@@ -23,7 +23,7 @@ jobs:
       contents: read
       actions: read
     if: github.repository_id == '1437742487' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 20
     outputs:
       tested_sha: ${{ steps.request.outputs.tested_sha }}
@@ -101,7 +101,7 @@ jobs:
       actions: read
     needs: gate
     name: Isolated adversarial scenarios
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     defaults:
       run:
         working-directory: source

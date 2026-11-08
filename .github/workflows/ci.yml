@@ -28,7 +28,7 @@ jobs:
       contents: read
       actions: read
     if: github.repository_id == '1437742487' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 20
     outputs:
       tested_sha: ${{ steps.request.outputs.tested_sha }}
@@ -114,7 +114,7 @@ jobs:
       actions: read
     needs: gate
     name: Source Security
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 20
     steps:
       - name: Create scoped core metadata token
@@ -215,7 +215,7 @@ jobs:
       actions: read
     needs: gate
     name: Hygiene
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     defaults:
       run:
         working-directory: source
@@ -326,7 +326,7 @@ jobs:
     name: Rust Build
     needs: [gate]
     if: needs.gate.outputs.rust == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     defaults:
       run:
         working-directory: source
@@ -493,7 +493,7 @@ jobs:
     name: Rust API
     needs: [gate]
     if: needs.gate.outputs.rust_build == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     defaults:
       run:
         working-directory: source
@@ -792,7 +792,7 @@ jobs:
     name: Rust
     needs: [gate, rust-build]
     if: ${{ !cancelled() && needs.gate.result == 'success' && needs.gate.outputs.rust == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
       - name: Require successful Rust build
@@ -858,7 +858,7 @@ jobs:
     name: PostgreSQL 18
     needs: [gate]
     if: needs.gate.outputs.postgres == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     defaults:
       run:
         working-directory: source
@@ -957,7 +957,7 @@ jobs:
     needs: gate
     name: Main RustSec Audit
     if: needs.gate.outputs.source_event == 'push'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     defaults:
       run:
         working-directory: source
@@ -1039,7 +1039,7 @@ jobs:
     name: Web
     needs: [gate]
     if: needs.gate.outputs.web == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     defaults:
       run:
         working-directory: source
@@ -1160,7 +1160,7 @@ jobs:
     name: PR Image Gate
     needs: [gate]
     if: needs.gate.outputs.source_event == 'pull_request' && needs.gate.outputs.image == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     defaults:
       run:
         working-directory: source
@@ -1320,7 +1320,7 @@ jobs:
     name: Image Dependencies
     needs: [gate]
     if: needs.gate.outputs.source_event == 'push' && needs.gate.outputs.image == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     defaults:
       run:
         working-directory: source
@@ -1438,7 +1438,7 @@ jobs:
       fail-fast: false
       matrix:
         shard: [1, 2]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     defaults:
       run:
         working-directory: source
@@ -1602,7 +1602,7 @@ jobs:
     name: Browser API
     needs: [gate, rust-api, web]
     if: ${{ !cancelled() && needs.gate.result == 'success' && needs.gate.outputs.browser == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
       - name: Require successful browser inputs
@@ -1670,7 +1670,7 @@ jobs:
     needs: [gate, browser-ui, browser-api]
     # A skipped required check can satisfy branch protection; inspect cancelled suites too.
     if: ${{ always() && needs.gate.result == 'success' && needs.gate.outputs.browser == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Create scoped core metadata token
         id: core-token

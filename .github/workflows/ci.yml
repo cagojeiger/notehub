@@ -880,7 +880,7 @@ jobs:
 
       - name: Audit Rust dependencies
         shell: private_run.sh {0}
-        run: cargo audit --file "${{ hashFiles('source/backend/Cargo.lock') != '' && 'backend/Cargo.lock' || 'Cargo.lock' }}" --deny yanked
+        run: source "$GITHUB_WORKSPACE/.control/.github/scripts/ci_rust_audit.sh"
 
   web:
     permissions:

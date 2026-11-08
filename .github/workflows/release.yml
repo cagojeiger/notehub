@@ -372,7 +372,7 @@ jobs:
         env:
           TARGET: ${{ matrix.target }}
         shell: private_run.sh {0}
-        run: cargo build --locked --release -p notegate-cli --target "$TARGET"
+        run: cargo build --manifest-path "${{ hashFiles('source/backend/Cargo.toml') != '' && 'backend/Cargo.toml' || 'Cargo.toml' }}" --locked --release -p notegate-cli --target "$TARGET"
 
       - name: Smoke test and package notegate-cli
         working-directory: source

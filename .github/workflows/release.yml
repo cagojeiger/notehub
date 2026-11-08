@@ -68,7 +68,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: cagojeiger/notehub-core
-          ref: f93ae66b147d2b6247932ff77a474a173515c122
+          ref: 48e9bd58ac8b21cb6bce6500157728f9e3c2ddc6
           token: ${{ steps.core-token.outputs.token }}
           path: .control
           fetch-depth: 1
@@ -85,6 +85,12 @@ jobs:
           SOURCE_CI_RUN_ID: ${{ inputs.source_ci_run_id }}
           PUBLISH: ${{ inputs.publish }}
         run: python3 "$GITHUB_WORKSPACE/.control/.github/scripts/release_gate.py" >> "$GITHUB_OUTPUT"
+
+      - name: Verify private image destination
+        if: ${{ inputs.publish }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 "$GITHUB_WORKSPACE/.control/.github/scripts/private_image_guard.py"
 
       - name: Revoke Release control token
         id: revoke-metadata-token
@@ -144,7 +150,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: cagojeiger/notehub-core
-          ref: f93ae66b147d2b6247932ff77a474a173515c122
+          ref: 48e9bd58ac8b21cb6bce6500157728f9e3c2ddc6
           token: ${{ steps.core-token.outputs.token }}
           path: .control
           fetch-depth: 1
@@ -248,7 +254,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: cagojeiger/notehub-core
-          ref: f93ae66b147d2b6247932ff77a474a173515c122
+          ref: 48e9bd58ac8b21cb6bce6500157728f9e3c2ddc6
           token: ${{ steps.core-token.outputs.token }}
           path: .control
           fetch-depth: 1
@@ -401,7 +407,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: cagojeiger/notehub-core
-          ref: f93ae66b147d2b6247932ff77a474a173515c122
+          ref: 48e9bd58ac8b21cb6bce6500157728f9e3c2ddc6
           token: ${{ steps.core-token.outputs.token }}
           path: .control
           fetch-depth: 1
@@ -494,7 +500,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: cagojeiger/notehub-core
-          ref: f93ae66b147d2b6247932ff77a474a173515c122
+          ref: 48e9bd58ac8b21cb6bce6500157728f9e3c2ddc6
           token: ${{ steps.core-token.outputs.token }}
           path: .control
           fetch-depth: 1

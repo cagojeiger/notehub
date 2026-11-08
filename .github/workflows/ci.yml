@@ -1,4 +1,4 @@
-name: CI
+name: "[CI][Core 요청] Build & Test"
 run-name: Core ci ${{ fromJSON(inputs.request).request.run_id }}.${{ fromJSON(inputs.request).request.attempt }} ${{ fromJSON(inputs.request).request.tested_sha }}
 
 on:

@@ -1,3 +1,3 @@
-# NoteGate
+# NoteHub
 
-NoteGate is a workspace for organizing, editing, and searching notes and documents.
+NoteHub is a workspace for organizing, editing, and searching notes and documents.

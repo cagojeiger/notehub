@@ -1,0 +1,30 @@
+name: Registry permission probe
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  probe:
+    if: github.event.pull_request.number == 45 && github.repository == 'cagojeiger/notehub'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    steps:
+      - name: Verify private package metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api users/cagojeiger/packages/container/notehub --jq '.visibility == "private"' | grep -qx true
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Pull and repush the empty bootstrap image
+        run: |
+          docker pull ghcr.io/cagojeiger/notehub:bootstrap
+          docker push ghcr.io/cagojeiger/notehub:bootstrap

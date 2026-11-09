@@ -23,6 +23,7 @@ jobs:
     timeout-minutes: 20
     outputs:
       tested_sha: ${{ steps.request.outputs.tested_sha }}
+      core_sha: ${{ steps.request.outputs.core_sha }}
       source_event: ${{ steps.request.outputs.source_event }}
       head_sha: ${{ steps.request.outputs.head_sha }}
       base_sha: ${{ steps.request.outputs.base_sha }}
@@ -47,6 +48,7 @@ jobs:
           permission-pull-requests: read
 
       - name: Checkout trusted private CI control
+        id: control
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: cagojeiger/notehub-core
@@ -61,6 +63,7 @@ jobs:
         id: request
         env:
           REQUEST_JSON: ${{ inputs.request }}
+          CORE_CONTROL_SHA: ${{ steps.control.outputs.commit }}
           GH_TOKEN: ${{ github.token }}
           CORE_TOKEN: ${{ steps.core-token.outputs.token }}
         run: python3 .control/.github/scripts/ci_bridge.py gate --kind image-security >> "$GITHUB_OUTPUT"
@@ -119,7 +122,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: cagojeiger/notehub-core
-          ref: main
+          ref: ${{ needs.gate.outputs.core_sha }}
           token: ${{ steps.core-token.outputs.token }}
           path: .control
           fetch-depth: 1
@@ -133,6 +136,7 @@ jobs:
           request: ${{ inputs.request }}
           kind: image-security
           core-token: ${{ steps.core-token.outputs.token }}
+          control-sha: ${{ needs.gate.outputs.core_sha }}
 
       - name: Ensure core metadata token revoked
         if: ${{ always() && steps.core-token.outputs.token != '' }}
@@ -192,7 +196,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: cagojeiger/notehub-core
-          ref: main
+          ref: ${{ needs.gate.outputs.core_sha }}
           token: ${{ steps.core-token.outputs.token }}
           path: .control
           fetch-depth: 1
@@ -206,6 +210,7 @@ jobs:
           request: ${{ inputs.request }}
           kind: image-security
           core-token: ${{ steps.core-token.outputs.token }}
+          control-sha: ${{ needs.gate.outputs.core_sha }}
 
       - name: Ensure core metadata token revoked
         if: ${{ always() && steps.core-token.outputs.token != '' }}
@@ -318,7 +323,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: cagojeiger/notehub-core
-          ref: main
+          ref: ${{ needs.gate.outputs.core_sha }}
           token: ${{ steps.core-token.outputs.token }}
           path: .control
           fetch-depth: 1
@@ -332,6 +337,7 @@ jobs:
           request: ${{ inputs.request }}
           kind: image-security
           core-token: ${{ steps.core-token.outputs.token }}
+          control-sha: ${{ needs.gate.outputs.core_sha }}
 
       - name: Ensure core metadata token revoked
         if: ${{ always() && steps.core-token.outputs.token != '' }}

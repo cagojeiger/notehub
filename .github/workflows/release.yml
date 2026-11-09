@@ -68,7 +68,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: cagojeiger/notehub-core
-          ref: b3c8b68c224403a80bf410d3241ca377dd01fab9
+          ref: daf030c18706dc3b559075783bc97ff6e5db8ad8
           token: ${{ steps.core-token.outputs.token }}
           path: .control
           fetch-depth: 1
@@ -150,7 +150,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: cagojeiger/notehub-core
-          ref: b3c8b68c224403a80bf410d3241ca377dd01fab9
+          ref: daf030c18706dc3b559075783bc97ff6e5db8ad8
           token: ${{ steps.core-token.outputs.token }}
           path: .control
           fetch-depth: 1
@@ -254,7 +254,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: cagojeiger/notehub-core
-          ref: b3c8b68c224403a80bf410d3241ca377dd01fab9
+          ref: daf030c18706dc3b559075783bc97ff6e5db8ad8
           token: ${{ steps.core-token.outputs.token }}
           path: .control
           fetch-depth: 1
@@ -407,7 +407,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: cagojeiger/notehub-core
-          ref: b3c8b68c224403a80bf410d3241ca377dd01fab9
+          ref: daf030c18706dc3b559075783bc97ff6e5db8ad8
           token: ${{ steps.core-token.outputs.token }}
           path: .control
           fetch-depth: 1
@@ -500,7 +500,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: cagojeiger/notehub-core
-          ref: b3c8b68c224403a80bf410d3241ca377dd01fab9
+          ref: daf030c18706dc3b559075783bc97ff6e5db8ad8
           token: ${{ steps.core-token.outputs.token }}
           path: .control
           fetch-depth: 1

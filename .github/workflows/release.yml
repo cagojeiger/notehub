@@ -47,6 +47,7 @@ jobs:
       version: ${{ steps.plan.outputs.version }}
       tag: ${{ steps.plan.outputs.tag }}
       source_sha: ${{ steps.plan.outputs.source_sha }}
+      control_sha: ${{ steps.control.outputs.commit }}
       ci_run_id: ${{ steps.plan.outputs.ci_run_id }}
       tag_object_sha: ${{ steps.plan.outputs.tag_object_sha }}
       notes_sha256: ${{ steps.plan.outputs.notes_sha256 }}
@@ -65,10 +66,11 @@ jobs:
           permission-actions: read
 
       - name: Checkout trusted private Release control
+        id: control
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: cagojeiger/notehub-core
-          ref: 7e6aab1e6009075cb1f6b3f2f993454849338a44
+          ref: main
           token: ${{ steps.core-token.outputs.token }}
           path: .control
           fetch-depth: 1
@@ -150,7 +152,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: cagojeiger/notehub-core
-          ref: 7e6aab1e6009075cb1f6b3f2f993454849338a44
+          ref: ${{ needs.version.outputs.control_sha }}
           token: ${{ steps.core-token.outputs.token }}
           path: .control
           fetch-depth: 1
@@ -254,7 +256,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: cagojeiger/notehub-core
-          ref: 7e6aab1e6009075cb1f6b3f2f993454849338a44
+          ref: ${{ needs.version.outputs.control_sha }}
           token: ${{ steps.core-token.outputs.token }}
           path: .control
           fetch-depth: 1
@@ -407,7 +409,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: cagojeiger/notehub-core
-          ref: 7e6aab1e6009075cb1f6b3f2f993454849338a44
+          ref: ${{ needs.version.outputs.control_sha }}
           token: ${{ steps.core-token.outputs.token }}
           path: .control
           fetch-depth: 1
@@ -500,7 +502,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: cagojeiger/notehub-core
-          ref: 7e6aab1e6009075cb1f6b3f2f993454849338a44
+          ref: ${{ needs.version.outputs.control_sha }}
           token: ${{ steps.core-token.outputs.token }}
           path: .control
           fetch-depth: 1

@@ -1,0 +1,3009 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "NoteGate REST API",
+    "description": "Stable resource API for Agent integrations. Authenticate with an Agent-owned ngk_v2_ bearer key. Access is limited to connected spaces and their read/write permissions.",
+    "license": {
+      "name": ""
+    },
+    "version": "0.1.144"
+  },
+  "paths": {
+    "/api/v2/me": {
+      "get": {
+        "tags": [
+          "identity"
+        ],
+        "operationId": "get_me",
+        "parameters": [
+          {
+            "name": "x-notegate-purpose",
+            "in": "header",
+            "description": "Optional caller-declared reason, percent-encoded UTF-8 (for example encodeURIComponent(reason)). After decoding: 1..200 Unicode characters, no surrounding whitespace or control characters. Send once. Missing means no recorded reason; invalid values return 400 before execution. Stored encrypted in invocation history and propagated to successful Changes and text revisions. Do not include secrets or document content.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "review%20design%20notes"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Get the Agent API-key caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Common JSON error. Inspect `error` for a stable code. Typical codes include invalid_input, forbidden, not_found, method_not_allowed, request_timeout, conflict, payload_too_large, node_write_locked, subtree_write_locked, rate_limited, object_storage_unavailable, and internal_error. Retryable responses can include a Retry-After header.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v2/spaces": {
+      "get": {
+        "tags": [
+          "spaces"
+        ],
+        "operationId": "list_spaces",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Page size; defaults to 50 and is capped at 100",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Opaque cursor returned by the preceding response; keep all other parameters unchanged",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-notegate-purpose",
+            "in": "header",
+            "description": "Optional caller-declared reason, percent-encoded UTF-8 (for example encodeURIComponent(reason)). After decoding: 1..200 Unicode characters, no surrounding whitespace or control characters. Send once. Missing means no recorded reason; invalid values return 400 before execution. Stored encrypted in invocation history and propagated to successful Changes and text revisions. Do not include secrets or document content.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "review%20design%20notes"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List spaces connected to the Agent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpacesResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Common JSON error. Inspect `error` for a stable code. Typical codes include invalid_input, forbidden, not_found, method_not_allowed, request_timeout, conflict, payload_too_large, node_write_locked, subtree_write_locked, rate_limited, object_storage_unavailable, and internal_error. Retryable responses can include a Retry-After header.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v2/spaces/{space_id}": {
+      "get": {
+        "tags": [
+          "spaces"
+        ],
+        "operationId": "get_space",
+        "parameters": [
+          {
+            "name": "space_id",
+            "in": "path",
+            "description": "Space id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-notegate-purpose",
+            "in": "header",
+            "description": "Optional caller-declared reason, percent-encoded UTF-8 (for example encodeURIComponent(reason)). After decoding: 1..200 Unicode characters, no surrounding whitespace or control characters. Send once. Missing means no recorded reason; invalid values return 400 before execution. Stored encrypted in invocation history and propagated to successful Changes and text revisions. Do not include secrets or document content.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "review%20design%20notes"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Get a connected space",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpaceOut"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Common JSON error. Inspect `error` for a stable code. Typical codes include invalid_input, forbidden, not_found, method_not_allowed, request_timeout, conflict, payload_too_large, node_write_locked, subtree_write_locked, rate_limited, object_storage_unavailable, and internal_error. Retryable responses can include a Retry-After header.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v2/spaces/{space_id}/file-uploads": {
+      "post": {
+        "tags": [
+          "files"
+        ],
+        "operationId": "begin_file_upload",
+        "parameters": [
+          {
+            "name": "space_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-notegate-purpose",
+            "in": "header",
+            "description": "Optional caller-declared reason, percent-encoded UTF-8 (for example encodeURIComponent(reason)). After decoding: 1..200 Unicode characters, no surrounding whitespace or control characters. Send once. Missing means no recorded reason; invalid values return 400 before execution. Stored encrypted in invocation history and propagated to successful Changes and text revisions. Do not include secrets or document content.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "review%20design%20notes"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BeginUploadBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Create an object upload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BeginUploadResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Common JSON error. Inspect `error` for a stable code. Typical codes include invalid_input, forbidden, not_found, method_not_allowed, request_timeout, conflict, payload_too_large, node_write_locked, subtree_write_locked, rate_limited, object_storage_unavailable, and internal_error. Retryable responses can include a Retry-After header.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v2/spaces/{space_id}/file-uploads/{upload_id}": {
+      "delete": {
+        "tags": [
+          "files"
+        ],
+        "operationId": "abort_file_upload",
+        "parameters": [
+          {
+            "name": "space_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "upload_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-notegate-purpose",
+            "in": "header",
+            "description": "Optional caller-declared reason, percent-encoded UTF-8 (for example encodeURIComponent(reason)). After decoding: 1..200 Unicode characters, no surrounding whitespace or control characters. Send once. Missing means no recorded reason; invalid values return 400 before execution. Stored encrypted in invocation history and propagated to successful Changes and text revisions. Do not include secrets or document content.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "review%20design%20notes"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Queue incomplete upload cleanup"
+          },
+          "default": {
+            "description": "Common JSON error. Inspect `error` for a stable code. Typical codes include invalid_input, forbidden, not_found, method_not_allowed, request_timeout, conflict, payload_too_large, node_write_locked, subtree_write_locked, rate_limited, object_storage_unavailable, and internal_error. Retryable responses can include a Retry-After header.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v2/spaces/{space_id}/file-uploads/{upload_id}/complete": {
+      "post": {
+        "tags": [
+          "files"
+        ],
+        "operationId": "complete_file_upload",
+        "parameters": [
+          {
+            "name": "space_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "upload_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-notegate-purpose",
+            "in": "header",
+            "description": "Optional caller-declared reason, percent-encoded UTF-8 (for example encodeURIComponent(reason)). After decoding: 1..200 Unicode characters, no surrounding whitespace or control characters. Send once. Missing means no recorded reason; invalid values return 400 before execution. Stored encrypted in invocation history and propagated to successful Changes and text revisions. Do not include secrets or document content.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "review%20design%20notes"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/CompleteUploadBody"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Attach a completed object as a file node",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Common JSON error. Inspect `error` for a stable code. Typical codes include invalid_input, forbidden, not_found, method_not_allowed, request_timeout, conflict, payload_too_large, node_write_locked, subtree_write_locked, rate_limited, object_storage_unavailable, and internal_error. Retryable responses can include a Retry-After header.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v2/spaces/{space_id}/file-uploads/{upload_id}/parts": {
+      "post": {
+        "tags": [
+          "files"
+        ],
+        "operationId": "prepare_file_upload_parts",
+        "parameters": [
+          {
+            "name": "space_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "upload_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-notegate-purpose",
+            "in": "header",
+            "description": "Optional caller-declared reason, percent-encoded UTF-8 (for example encodeURIComponent(reason)). After decoding: 1..200 Unicode characters, no surrounding whitespace or control characters. Send once. Missing means no recorded reason; invalid values return 400 before execution. Stored encrypted in invocation history and propagated to successful Changes and text revisions. Do not include secrets or document content.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "review%20design%20notes"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreparePartsBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Create presigned multipart PUT URLs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreparePartsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Common JSON error. Inspect `error` for a stable code. Typical codes include invalid_input, forbidden, not_found, method_not_allowed, request_timeout, conflict, payload_too_large, node_write_locked, subtree_write_locked, rate_limited, object_storage_unavailable, and internal_error. Retryable responses can include a Retry-After header.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v2/spaces/{space_id}/files/{node_id}/download": {
+      "get": {
+        "tags": [
+          "files"
+        ],
+        "operationId": "download_file",
+        "parameters": [
+          {
+            "name": "space_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "node_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-notegate-purpose",
+            "in": "header",
+            "description": "Optional caller-declared reason, percent-encoded UTF-8 (for example encodeURIComponent(reason)). After decoding: 1..200 Unicode characters, no surrounding whitespace or control characters. Send once. Missing means no recorded reason; invalid values return 400 before execution. Stored encrypted in invocation history and propagated to successful Changes and text revisions. Do not include secrets or document content.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "review%20design%20notes"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Create a presigned file download URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Common JSON error. Inspect `error` for a stable code. Typical codes include invalid_input, forbidden, not_found, method_not_allowed, request_timeout, conflict, payload_too_large, node_write_locked, subtree_write_locked, rate_limited, object_storage_unavailable, and internal_error. Retryable responses can include a Retry-After header.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v2/spaces/{space_id}/nodes": {
+      "post": {
+        "tags": [
+          "nodes"
+        ],
+        "operationId": "create_node",
+        "parameters": [
+          {
+            "name": "space_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-notegate-purpose",
+            "in": "header",
+            "description": "Optional caller-declared reason, percent-encoded UTF-8 (for example encodeURIComponent(reason)). After decoding: 1..200 Unicode characters, no surrounding whitespace or control characters. Send once. Missing means no recorded reason; invalid values return 400 before execution. Stored encrypted in invocation history and propagated to successful Changes and text revisions. Do not include secrets or document content.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "review%20design%20notes"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateNodeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Create a folder or plain-text node",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NodeOut"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Common JSON error. Inspect `error` for a stable code. Typical codes include invalid_input, forbidden, not_found, method_not_allowed, request_timeout, conflict, payload_too_large, node_write_locked, subtree_write_locked, rate_limited, object_storage_unavailable, and internal_error. Retryable responses can include a Retry-After header.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v2/spaces/{space_id}/nodes/{node_id}": {
+      "get": {
+        "tags": [
+          "nodes"
+        ],
+        "operationId": "get_node",
+        "parameters": [
+          {
+            "name": "space_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "node_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-notegate-purpose",
+            "in": "header",
+            "description": "Optional caller-declared reason, percent-encoded UTF-8 (for example encodeURIComponent(reason)). After decoding: 1..200 Unicode characters, no surrounding whitespace or control characters. Send once. Missing means no recorded reason; invalid values return 400 before execution. Stored encrypted in invocation history and propagated to successful Changes and text revisions. Do not include secrets or document content.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "review%20design%20notes"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Get node details and effective write-lock state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NodeOut"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Common JSON error. Inspect `error` for a stable code. Typical codes include invalid_input, forbidden, not_found, method_not_allowed, request_timeout, conflict, payload_too_large, node_write_locked, subtree_write_locked, rate_limited, object_storage_unavailable, and internal_error. Retryable responses can include a Retry-After header.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "nodes"
+        ],
+        "operationId": "delete_node",
+        "parameters": [
+          {
+            "name": "space_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "node_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "recursive",
+            "in": "query",
+            "description": "Required for non-empty folders",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "x-notegate-purpose",
+            "in": "header",
+            "description": "Optional caller-declared reason, percent-encoded UTF-8 (for example encodeURIComponent(reason)). After decoding: 1..200 Unicode characters, no surrounding whitespace or control characters. Send once. Missing means no recorded reason; invalid values return 400 before execution. Stored encrypted in invocation history and propagated to successful Changes and text revisions. Do not include secrets or document content.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "review%20design%20notes"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Soft-delete a node",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteNodeResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Common JSON error. Inspect `error` for a stable code. Typical codes include invalid_input, forbidden, not_found, method_not_allowed, request_timeout, conflict, payload_too_large, node_write_locked, subtree_write_locked, rate_limited, object_storage_unavailable, and internal_error. Retryable responses can include a Retry-After header.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v2/spaces/{space_id}/nodes/{node_id}/children": {
+      "get": {
+        "tags": [
+          "nodes"
+        ],
+        "operationId": "list_node_children",
+        "parameters": [
+          {
+            "name": "space_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "node_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Page size; defaults to 100 and is capped at 200",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Opaque cursor returned by the preceding response; keep all other parameters unchanged",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-notegate-purpose",
+            "in": "header",
+            "description": "Optional caller-declared reason, percent-encoded UTF-8 (for example encodeURIComponent(reason)). After decoding: 1..200 Unicode characters, no surrounding whitespace or control characters. Send once. Missing means no recorded reason; invalid values return 400 before execution. Stored encrypted in invocation history and propagated to successful Changes and text revisions. Do not include secrets or document content.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "review%20design%20notes"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List direct children",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChildrenResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Common JSON error. Inspect `error` for a stable code. Typical codes include invalid_input, forbidden, not_found, method_not_allowed, request_timeout, conflict, payload_too_large, node_write_locked, subtree_write_locked, rate_limited, object_storage_unavailable, and internal_error. Retryable responses can include a Retry-After header.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v2/spaces/{space_id}/nodes/{node_id}/copy": {
+      "post": {
+        "tags": [
+          "nodes"
+        ],
+        "operationId": "copy_node",
+        "parameters": [
+          {
+            "name": "space_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "node_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-notegate-purpose",
+            "in": "header",
+            "description": "Optional caller-declared reason, percent-encoded UTF-8 (for example encodeURIComponent(reason)). After decoding: 1..200 Unicode characters, no surrounding whitespace or control characters. Send once. Missing means no recorded reason; invalid values return 400 before execution. Stored encrypted in invocation history and propagated to successful Changes and text revisions. Do not include secrets or document content.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "review%20design%20notes"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CopyNodeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Copy a node inside the same space",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CopyNodeResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Copy conflicts, including file nodes or file-containing subtrees",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Common JSON error. Inspect `error` for a stable code. Typical codes include invalid_input, forbidden, not_found, method_not_allowed, request_timeout, conflict, payload_too_large, node_write_locked, subtree_write_locked, rate_limited, object_storage_unavailable, and internal_error. Retryable responses can include a Retry-After header.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v2/spaces/{space_id}/nodes/{node_id}/move": {
+      "post": {
+        "tags": [
+          "nodes"
+        ],
+        "operationId": "move_node",
+        "parameters": [
+          {
+            "name": "space_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "node_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-notegate-purpose",
+            "in": "header",
+            "description": "Optional caller-declared reason, percent-encoded UTF-8 (for example encodeURIComponent(reason)). After decoding: 1..200 Unicode characters, no surrounding whitespace or control characters. Send once. Missing means no recorded reason; invalid values return 400 before execution. Stored encrypted in invocation history and propagated to successful Changes and text revisions. Do not include secrets or document content.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "review%20design%20notes"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveNodeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Move or rename a node",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NodeOut"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Common JSON error. Inspect `error` for a stable code. Typical codes include invalid_input, forbidden, not_found, method_not_allowed, request_timeout, conflict, payload_too_large, node_write_locked, subtree_write_locked, rate_limited, object_storage_unavailable, and internal_error. Retryable responses can include a Retry-After header.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v2/spaces/{space_id}/paths/resolve": {
+      "get": {
+        "tags": [
+          "nodes"
+        ],
+        "operationId": "resolve_node_path",
+        "parameters": [
+          {
+            "name": "space_id",
+            "in": "path",
+            "description": "Space id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "description": "Absolute path inside the space",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-notegate-purpose",
+            "in": "header",
+            "description": "Optional caller-declared reason, percent-encoded UTF-8 (for example encodeURIComponent(reason)). After decoding: 1..200 Unicode characters, no surrounding whitespace or control characters. Send once. Missing means no recorded reason; invalid values return 400 before execution. Stored encrypted in invocation history and propagated to successful Changes and text revisions. Do not include secrets or document content.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "review%20design%20notes"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resolve a path to a node",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NodeOut"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Common JSON error. Inspect `error` for a stable code. Typical codes include invalid_input, forbidden, not_found, method_not_allowed, request_timeout, conflict, payload_too_large, node_write_locked, subtree_write_locked, rate_limited, object_storage_unavailable, and internal_error. Retryable responses can include a Retry-After header.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v2/spaces/{space_id}/text/{node_id}": {
+      "get": {
+        "tags": [
+          "text"
+        ],
+        "operationId": "read_text",
+        "parameters": [
+          {
+            "name": "space_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "node_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "start_line",
+            "in": "query",
+            "description": "1-based first line",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "max_lines",
+            "in": "query",
+            "description": "Maximum lines; defaults to 200 and is capped at 5000",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "max_bytes",
+            "in": "query",
+            "description": "Maximum UTF-8 bytes; defaults to 65536 and is capped at 1048576",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "if_none_match_sha256",
+            "in": "query",
+            "description": "Return an unchanged marker instead of content when this complete-text SHA-256 still matches",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-notegate-purpose",
+            "in": "header",
+            "description": "Optional caller-declared reason, percent-encoded UTF-8 (for example encodeURIComponent(reason)). After decoding: 1..200 Unicode characters, no surrounding whitespace or control characters. Send once. Missing means no recorded reason; invalid values return 400 before execution. Stored encrypted in invocation history and propagated to successful Changes and text revisions. Do not include secrets or document content.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "review%20design%20notes"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read plain text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Common JSON error. Inspect `error` for a stable code. Typical codes include invalid_input, forbidden, not_found, method_not_allowed, request_timeout, conflict, payload_too_large, node_write_locked, subtree_write_locked, rate_limited, object_storage_unavailable, and internal_error. Retryable responses can include a Retry-After header.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "text"
+        ],
+        "operationId": "replace_text",
+        "parameters": [
+          {
+            "name": "space_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "node_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-notegate-purpose",
+            "in": "header",
+            "description": "Optional caller-declared reason, percent-encoded UTF-8 (for example encodeURIComponent(reason)). After decoding: 1..200 Unicode characters, no surrounding whitespace or control characters. Send once. Missing means no recorded reason; invalid values return 400 before execution. Stored encrypted in invocation history and propagated to successful Changes and text revisions. Do not include secrets or document content.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "review%20design%20notes"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Replace plain text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TextMutationResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Common JSON error. Inspect `error` for a stable code. Typical codes include invalid_input, forbidden, not_found, method_not_allowed, request_timeout, conflict, payload_too_large, node_write_locked, subtree_write_locked, rate_limited, object_storage_unavailable, and internal_error. Retryable responses can include a Retry-After header.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "text"
+        ],
+        "operationId": "patch_text",
+        "parameters": [
+          {
+            "name": "space_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "node_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-notegate-purpose",
+            "in": "header",
+            "description": "Optional caller-declared reason, percent-encoded UTF-8 (for example encodeURIComponent(reason)). After decoding: 1..200 Unicode characters, no surrounding whitespace or control characters. Send once. Missing means no recorded reason; invalid values return 400 before execution. Stored encrypted in invocation history and propagated to successful Changes and text revisions. Do not include secrets or document content.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "review%20design%20notes"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Apply exact text replacements",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TextEditResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Common JSON error. Inspect `error` for a stable code. Typical codes include invalid_input, forbidden, not_found, method_not_allowed, request_timeout, conflict, payload_too_large, node_write_locked, subtree_write_locked, rate_limited, object_storage_unavailable, and internal_error. Retryable responses can include a Retry-After header.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v2/spaces/{space_id}/text/{node_id}/append": {
+      "post": {
+        "tags": [
+          "text"
+        ],
+        "operationId": "append_text",
+        "parameters": [
+          {
+            "name": "space_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "node_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-notegate-purpose",
+            "in": "header",
+            "description": "Optional caller-declared reason, percent-encoded UTF-8 (for example encodeURIComponent(reason)). After decoding: 1..200 Unicode characters, no surrounding whitespace or control characters. Send once. Missing means no recorded reason; invalid values return 400 before execution. Stored encrypted in invocation history and propagated to successful Changes and text revisions. Do not include secrets or document content.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "review%20design%20notes"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppendBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Append plain text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TextMutationResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Common JSON error. Inspect `error` for a stable code. Typical codes include invalid_input, forbidden, not_found, method_not_allowed, request_timeout, conflict, payload_too_large, node_write_locked, subtree_write_locked, rate_limited, object_storage_unavailable, and internal_error. Retryable responses can include a Retry-After header.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v2/spaces/{space_id}/text/{node_id}/edit": {
+      "post": {
+        "tags": [
+          "text"
+        ],
+        "operationId": "edit_text",
+        "parameters": [
+          {
+            "name": "space_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "node_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-notegate-purpose",
+            "in": "header",
+            "description": "Optional caller-declared reason, percent-encoded UTF-8 (for example encodeURIComponent(reason)). After decoding: 1..200 Unicode characters, no surrounding whitespace or control characters. Send once. Missing means no recorded reason; invalid values return 400 before execution. Stored encrypted in invocation history and propagated to successful Changes and text revisions. Do not include secrets or document content.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "review%20design%20notes"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LineEditBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Apply line-based edits",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TextEditResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Common JSON error. Inspect `error` for a stable code. Typical codes include invalid_input, forbidden, not_found, method_not_allowed, request_timeout, conflict, payload_too_large, node_write_locked, subtree_write_locked, rate_limited, object_storage_unavailable, and internal_error. Retryable responses can include a Retry-After header.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v2/spaces/{space_id}/tree": {
+      "get": {
+        "tags": [
+          "nodes"
+        ],
+        "operationId": "list_tree",
+        "parameters": [
+          {
+            "name": "space_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "description": "Absolute folder path; defaults to /",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "depth",
+            "in": "query",
+            "description": "Tree depth; defaults to 2 and is capped at 7",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Page size; defaults to 100 and is capped at 200",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Opaque cursor returned by the preceding response; keep path and depth unchanged",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-notegate-purpose",
+            "in": "header",
+            "description": "Optional caller-declared reason, percent-encoded UTF-8 (for example encodeURIComponent(reason)). After decoding: 1..200 Unicode characters, no surrounding whitespace or control characters. Send once. Missing means no recorded reason; invalid values return 400 before execution. Stored encrypted in invocation history and propagated to successful Changes and text revisions. Do not include secrets or document content.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "review%20design%20notes"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List a bounded subtree",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TreeResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Common JSON error. Inspect `error` for a stable code. Typical codes include invalid_input, forbidden, not_found, method_not_allowed, request_timeout, conflict, payload_too_large, node_write_locked, subtree_write_locked, rate_limited, object_storage_unavailable, and internal_error. Retryable responses can include a Retry-After header.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AccountKindOut": {
+        "type": "string",
+        "enum": [
+          "user",
+          "agent"
+        ]
+      },
+      "AccountOut": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "display_name"
+        ],
+        "properties": {
+          "display_name": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/AccountKindOut"
+          }
+        }
+      },
+      "AppendBody": {
+        "type": "object",
+        "description": "Appends UTF-8 content to an existing plain-text node.",
+        "required": [
+          "content"
+        ],
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "UTF-8 content to append."
+          },
+          "edit_session_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Optional editing session or AI operation ID; missing means an independent save."
+          },
+          "ensure_newline": {
+            "type": "boolean",
+            "description": "Insert one line break before appending when the existing content is non-empty and lacks one.",
+            "default": false
+          },
+          "expected_sha256": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional optimistic guard copied from the latest read response."
+          }
+        },
+        "additionalProperties": false,
+        "example": {
+          "content": "Next entry",
+          "ensure_newline": true,
+          "expected_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        }
+      },
+      "BeginUploadBody": {
+        "type": "object",
+        "description": "Starts a presigned object upload and reserves the destination file name.",
+        "required": [
+          "parent_id",
+          "name",
+          "byte_len",
+          "media_type"
+        ],
+        "properties": {
+          "byte_len": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Exact object size in bytes. The system cap is 100 GiB; space quota can be lower.",
+            "maximum": 107374182400,
+            "minimum": 0
+          },
+          "encryption_metadata": {
+            "description": "Client-defined JSON object required for `client` encryption and omitted for `none`."
+          },
+          "encryption_mode": {
+            "$ref": "#/components/schemas/UploadEncryptionMode",
+            "description": "`none` (default) or `client`. NoteGate never receives a client encryption key.",
+            "default": "none"
+          },
+          "media_type": {
+            "type": "string",
+            "description": "MIME type stored with the object.",
+            "example": "application/pdf"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the file node that will be attached by `complete`."
+          },
+          "original_filename": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional download filename presented to clients."
+          },
+          "parent_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Existing destination folder."
+          }
+        },
+        "additionalProperties": false,
+        "example": {
+          "byte_len": 7340032,
+          "encryption_mode": "none",
+          "media_type": "application/pdf",
+          "name": "report.pdf",
+          "original_filename": "Q3 report.pdf",
+          "parent_id": "11111111-1111-1111-1111-111111111111"
+        }
+      },
+      "BeginUploadResponse": {
+        "type": "object",
+        "description": "Upload ledger identifier and the provider transfer instructions.",
+        "required": [
+          "upload_id",
+          "expires_in_seconds",
+          "transfer"
+        ],
+        "properties": {
+          "expires_in_seconds": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Lifetime of each returned presigned URL, measured from issuance.",
+            "minimum": 0
+          },
+          "transfer": {
+            "$ref": "#/components/schemas/UploadTransferOut"
+          },
+          "upload_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "NoteGate upload ledger identifier used by parts, complete, and abort calls."
+          }
+        }
+      },
+      "ChildrenResponse": {
+        "type": "object",
+        "required": [
+          "parent",
+          "children",
+          "page"
+        ],
+        "properties": {
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NodeSummaryOut"
+            }
+          },
+          "page": {
+            "$ref": "#/components/schemas/PageOut"
+          },
+          "parent": {
+            "$ref": "#/components/schemas/NodeOut"
+          }
+        }
+      },
+      "CompleteUploadBody": {
+        "type": "object",
+        "description": "Finalizes a provider upload and attaches its file node.\n\nOmit `completed_parts` for single PUT uploads. Multipart uploads must include every\npart number and the ETag returned by the provider PUT response.",
+        "properties": {
+          "completed_parts": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/CompletedPartBody"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "examples": [
+          {},
+          {
+            "completed_parts": [
+              {
+                "etag": "\"provider-etag-1\"",
+                "part_number": 1
+              },
+              {
+                "etag": "\"provider-etag-2\"",
+                "part_number": 2
+              }
+            ]
+          }
+        ]
+      },
+      "CompletedPartBody": {
+        "type": "object",
+        "required": [
+          "part_number",
+          "etag"
+        ],
+        "properties": {
+          "etag": {
+            "type": "string",
+            "description": "ETag returned by the object provider after uploading this part."
+          },
+          "part_number": {
+            "type": "integer",
+            "format": "int32",
+            "description": "1-based part number."
+          }
+        },
+        "additionalProperties": false
+      },
+      "CopyCountsOut": {
+        "type": "object",
+        "required": [
+          "nodes",
+          "texts",
+          "files"
+        ],
+        "properties": {
+          "files": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "nodes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "texts": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "CopyNodeBody": {
+        "type": "object",
+        "description": "Copies a node to another folder in the same space.",
+        "required": [
+          "new_parent_id",
+          "new_name"
+        ],
+        "properties": {
+          "new_name": {
+            "type": "string",
+            "description": "Name of the copied root node."
+          },
+          "new_parent_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Existing destination folder in the same space."
+          },
+          "recursive": {
+            "type": "boolean",
+            "description": "Must be true to copy a folder.",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "example": {
+          "new_name": "README-copy.md",
+          "new_parent_id": "22222222-2222-2222-2222-222222222222",
+          "recursive": false
+        }
+      },
+      "CopyNodeResponse": {
+        "type": "object",
+        "required": [
+          "node",
+          "counts"
+        ],
+        "properties": {
+          "counts": {
+            "$ref": "#/components/schemas/CopyCountsOut"
+          },
+          "node": {
+            "$ref": "#/components/schemas/NodeOut"
+          }
+        }
+      },
+      "CreateNodeBody": {
+        "type": "object",
+        "description": "Creates a folder or a plain-text node below an existing folder.",
+        "required": [
+          "parent_id",
+          "name",
+          "kind"
+        ],
+        "properties": {
+          "content": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Initial UTF-8 text. Allowed only when `kind=text`; omitted content creates an empty text."
+          },
+          "kind": {
+            "$ref": "#/components/schemas/CreateNodeKind",
+            "description": "Node kind. File nodes are created through the upload lifecycle."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the new node, not a path.",
+            "example": "README.md"
+          },
+          "parent_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Existing folder that will contain the new node."
+          }
+        },
+        "additionalProperties": false,
+        "examples": [
+          {
+            "kind": "folder",
+            "name": "notes",
+            "parent_id": "11111111-1111-1111-1111-111111111111"
+          },
+          {
+            "content": "# Project notes\n",
+            "kind": "text",
+            "name": "README.md",
+            "parent_id": "11111111-1111-1111-1111-111111111111"
+          }
+        ]
+      },
+      "CreateNodeKind": {
+        "type": "string",
+        "enum": [
+          "folder",
+          "text"
+        ]
+      },
+      "DeleteNodeResponse": {
+        "type": "object",
+        "required": [
+          "node_id",
+          "path",
+          "purge_after"
+        ],
+        "properties": {
+          "node_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "path": {
+            "type": "string"
+          },
+          "purge_after": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "DownloadResponse": {
+        "type": "object",
+        "required": [
+          "url",
+          "expires_in_seconds"
+        ],
+        "properties": {
+          "expires_in_seconds": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "description": "Common REST error response body. Runtime construction happens in [`ApiError::into_response`].",
+        "required": [
+          "error",
+          "kind",
+          "message"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Stable machine-readable error code.",
+            "example": "conflict"
+          },
+          "kind": {
+            "type": "string",
+            "description": "Alias of `error`, shared with the MCP error taxonomy.",
+            "example": "conflict"
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable explanation. Clients must branch on `error`, not this text."
+          }
+        },
+        "example": {
+          "error": "conflict",
+          "kind": "conflict",
+          "message": "expected_sha256 does not match the current text; read it again"
+        }
+      },
+      "FileEncryptionModeOut": {
+        "type": "string",
+        "enum": [
+          "none",
+          "client"
+        ]
+      },
+      "FileResponse": {
+        "type": "object",
+        "required": [
+          "node"
+        ],
+        "properties": {
+          "node": {
+            "$ref": "#/components/schemas/NodeOut"
+          }
+        }
+      },
+      "LineEditBody": {
+        "type": "object",
+        "description": "Applies one or more 1-based line edits atomically.",
+        "required": [
+          "edits"
+        ],
+        "properties": {
+          "edit_session_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Optional editing session or AI operation ID; missing means an independent save."
+          },
+          "edits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineEditItem"
+            },
+            "description": "Ordered line operations applied as one mutation."
+          },
+          "expected_sha256": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional optimistic guard copied from the latest read response."
+          }
+        },
+        "additionalProperties": false,
+        "example": {
+          "edits": [
+            {
+              "content": "replacement\n",
+              "end_line": 4,
+              "op": "replace_lines",
+              "start_line": 2
+            }
+          ],
+          "expected_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        }
+      },
+      "LineEditItem": {
+        "type": "object",
+        "required": [
+          "op"
+        ],
+        "properties": {
+          "content": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Required by insert and replace operations."
+          },
+          "end_line": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Required by replace and delete operations. Lines are 1-based and inclusive."
+          },
+          "line": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Required by insert operations. Lines are 1-based."
+          },
+          "op": {
+            "$ref": "#/components/schemas/LineEditOperation",
+            "description": "`insert_before_line`, `insert_after_line`, `replace_lines`, or `delete_lines`."
+          },
+          "start_line": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Required by replace and delete operations. Lines are 1-based and inclusive."
+          }
+        },
+        "additionalProperties": false
+      },
+      "LineEditOperation": {
+        "type": "string",
+        "enum": [
+          "insert_before_line",
+          "insert_after_line",
+          "replace_lines",
+          "delete_lines"
+        ]
+      },
+      "MeResponse": {
+        "type": "object",
+        "required": [
+          "account"
+        ],
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/AccountOut"
+          }
+        }
+      },
+      "MoveNodeBody": {
+        "type": "object",
+        "description": "Moves a node to another folder in the same space and optionally renames it.",
+        "required": [
+          "new_parent_id"
+        ],
+        "properties": {
+          "expected_parent_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Optional optimistic guard. The move fails if the current parent differs."
+          },
+          "new_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "New node name. Omit it to preserve the current name."
+          },
+          "new_parent_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Existing destination folder in the same space."
+          }
+        },
+        "additionalProperties": false,
+        "example": {
+          "expected_parent_id": "11111111-1111-1111-1111-111111111111",
+          "new_name": "renamed.md",
+          "new_parent_id": "22222222-2222-2222-2222-222222222222"
+        }
+      },
+      "NodeKindOut": {
+        "type": "string",
+        "enum": [
+          "folder",
+          "text",
+          "file"
+        ]
+      },
+      "NodeOut": {
+        "type": "object",
+        "description": "Complete node details. Kind-specific fields are omitted when not applicable.",
+        "required": [
+          "id",
+          "space_id",
+          "name",
+          "kind",
+          "path",
+          "sort_order",
+          "external_access_enabled",
+          "write_locked",
+          "effective_write_locked",
+          "write_lock_sources",
+          "has_children",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "byte_len": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "content_sha256": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "effective_write_locked": {
+            "type": "boolean",
+            "description": "Whether this node is write-locked directly or by an ancestor."
+          },
+          "encryption_metadata": {
+            "description": "Opaque client encryption metadata. Never contains the encryption key."
+          },
+          "encryption_mode": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/FileEncryptionModeOut",
+                "description": "File encryption mode: `none` or `client`, when kind is `file`."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "external_access_enabled": {
+            "type": "boolean"
+          },
+          "has_children": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/NodeKindOut",
+            "description": "`folder`, `text`, or `file`."
+          },
+          "line_count": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "media_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "original_filename": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "parent_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "path": {
+            "type": "string",
+            "description": "Canonical absolute path derived from parent relationships and names."
+          },
+          "sort_order": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "space_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "text_at_rest_encryption": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TextAtRestEncryptionOut",
+                "description": "Server-managed at-rest encryption state, when kind is `text`."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "text_storage_format": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TextStorageFormatOut",
+                "description": "Text storage representation, when kind is `text`."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "write_lock_sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WriteLockSourceOut"
+            },
+            "description": "Direct lock sources that make `effective_write_locked` true."
+          },
+          "write_locked": {
+            "type": "boolean",
+            "description": "Whether this node itself is directly write-locked."
+          }
+        }
+      },
+      "NodeSummaryOut": {
+        "type": "object",
+        "description": "Compact node representation used by tree and children responses.",
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "path",
+          "has_children",
+          "effective_write_locked",
+          "updated_at"
+        ],
+        "properties": {
+          "byte_len": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "effective_write_locked": {
+            "type": "boolean",
+            "description": "Effective direct-or-inherited write-lock state."
+          },
+          "has_children": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/NodeKindOut"
+          },
+          "line_count": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "media_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "parent_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "path": {
+            "type": "string",
+            "description": "Canonical absolute path."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PageOut": {
+        "type": "object",
+        "description": "Pagination metadata shared by list, tree, and search responses.",
+        "required": [
+          "limit",
+          "returned",
+          "has_more"
+        ],
+        "properties": {
+          "has_more": {
+            "type": "boolean",
+            "description": "Whether another page is available."
+          },
+          "limit": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Effective page size after server defaults and caps are applied."
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Opaque continuation cursor. Send it unchanged with the same operation and filters."
+          },
+          "returned": {
+            "type": "integer",
+            "description": "Number of items in this response.",
+            "minimum": 0
+          }
+        }
+      },
+      "PatchBody": {
+        "type": "object",
+        "description": "Applies one or more exact string replacements atomically.",
+        "required": [
+          "edits"
+        ],
+        "properties": {
+          "edit_session_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Optional editing session or AI operation ID; missing means an independent save."
+          },
+          "edits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PatchEditBody"
+            },
+            "description": "Ordered exact replacements applied as one mutation."
+          },
+          "expected_sha256": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional optimistic guard copied from the latest read response."
+          }
+        },
+        "additionalProperties": false,
+        "example": {
+          "edits": [
+            {
+              "expected_count": 1,
+              "mode": "unique",
+              "new_text": "published",
+              "old_text": "draft"
+            }
+          ],
+          "expected_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        }
+      },
+      "PatchEditBody": {
+        "type": "object",
+        "required": [
+          "old_text",
+          "new_text"
+        ],
+        "properties": {
+          "expected_count": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Optional assertion for the number of matches before mutation.",
+            "minimum": 0
+          },
+          "mode": {
+            "$ref": "#/components/schemas/PatchMatchMode",
+            "description": "Match selection: `unique` (default), `first`, or `all`.",
+            "default": "unique"
+          },
+          "new_text": {
+            "type": "string",
+            "description": "Replacement text."
+          },
+          "old_text": {
+            "type": "string",
+            "description": "Exact source text to match."
+          }
+        },
+        "additionalProperties": false
+      },
+      "PatchMatchMode": {
+        "type": "string",
+        "enum": [
+          "unique",
+          "first",
+          "all"
+        ]
+      },
+      "PermissionOut": {
+        "type": "string",
+        "enum": [
+          "read",
+          "write"
+        ]
+      },
+      "PreparePartsBody": {
+        "type": "object",
+        "description": "Requests presigned PUT URLs for selected multipart parts.",
+        "required": [
+          "part_numbers"
+        ],
+        "properties": {
+          "part_numbers": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "description": "Unique 1-based part numbers. At most 16 values are accepted per request.",
+            "maxItems": 16,
+            "minItems": 1
+          }
+        },
+        "additionalProperties": false,
+        "example": {
+          "part_numbers": [
+            1,
+            2,
+            3
+          ]
+        }
+      },
+      "PreparePartsResponse": {
+        "type": "object",
+        "required": [
+          "expires_in_seconds",
+          "parts"
+        ],
+        "properties": {
+          "expires_in_seconds": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "parts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UploadPartOut"
+            }
+          }
+        }
+      },
+      "ReadContentOut": {
+        "type": "object",
+        "description": "A bounded page of UTF-8 text and the cursor for the next line range.",
+        "required": [
+          "content",
+          "content_sha256",
+          "byte_len",
+          "line_count",
+          "start_line",
+          "end_line",
+          "returned_lines",
+          "truncated"
+        ],
+        "properties": {
+          "byte_len": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "content": {
+            "type": "string",
+            "description": "Returned UTF-8 content."
+          },
+          "content_sha256": {
+            "type": "string",
+            "description": "SHA-256 of the complete stored text, not only this page."
+          },
+          "end_line": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "line_count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "next_start_line": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Pass this value as `start_line` to continue, or null when complete."
+          },
+          "returned_lines": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "start_line": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "Whether more content remains after this response."
+          }
+        }
+      },
+      "ReadResponse": {
+        "type": "object",
+        "description": "Plain-text read result. `text` contains either a content page or an unchanged marker.",
+        "required": [
+          "node",
+          "text"
+        ],
+        "properties": {
+          "node": {
+            "$ref": "#/components/schemas/NodeOut"
+          },
+          "text": {
+            "$ref": "#/components/schemas/ReadTextOut"
+          }
+        }
+      },
+      "ReadTextOut": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ReadContentOut"
+          },
+          {
+            "$ref": "#/components/schemas/ReadUnchangedOut"
+          }
+        ],
+        "description": "Conditional reads return `ReadUnchangedOut`; other reads return `ReadContentOut`."
+      },
+      "ReadUnchangedOut": {
+        "type": "object",
+        "description": "Returned when `if_none_match_sha256` equals the current complete-text hash.",
+        "required": [
+          "unchanged",
+          "content_returned",
+          "content_sha256",
+          "byte_len",
+          "line_count"
+        ],
+        "properties": {
+          "byte_len": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "content_returned": {
+            "type": "boolean"
+          },
+          "content_sha256": {
+            "type": "string"
+          },
+          "line_count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "unchanged": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ReplaceBody": {
+        "type": "object",
+        "description": "Replaces the complete plain-text content.",
+        "required": [
+          "content"
+        ],
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "Complete replacement UTF-8 content."
+          },
+          "edit_session_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Optional editing session or AI operation ID; missing means an independent save."
+          },
+          "expected_sha256": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional optimistic guard copied from the latest read response."
+          }
+        },
+        "additionalProperties": false,
+        "example": {
+          "content": "# Updated document\n",
+          "expected_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        }
+      },
+      "SpaceFeaturesOut": {
+        "type": "object",
+        "description": "Tier-gated capabilities for this Space.",
+        "required": [
+          "text_encryption",
+          "write_lock"
+        ],
+        "properties": {
+          "text_encryption": {
+            "type": "boolean"
+          },
+          "write_lock": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SpaceOut": {
+        "type": "object",
+        "description": "A space connected to the authenticated Agent account.",
+        "required": [
+          "id",
+          "name",
+          "permission",
+          "root_node_id",
+          "default_external_access_enabled",
+          "default_text_encryption_enabled",
+          "features",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "default_external_access_enabled": {
+            "type": "boolean",
+            "description": "Default external access policy inherited by newly created nodes."
+          },
+          "default_text_encryption_enabled": {
+            "type": "boolean",
+            "description": "Default server-managed at-rest encryption policy for newly created text nodes."
+          },
+          "features": {
+            "$ref": "#/components/schemas/SpaceFeaturesOut"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "permission": {
+            "$ref": "#/components/schemas/PermissionOut",
+            "description": "Effective connection permission: `read` or `write`."
+          },
+          "root_node_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SpacesResponse": {
+        "type": "object",
+        "required": [
+          "spaces",
+          "page"
+        ],
+        "properties": {
+          "page": {
+            "$ref": "#/components/schemas/PageOut"
+          },
+          "spaces": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpaceOut"
+            }
+          }
+        }
+      },
+      "TextAtRestEncryptionOut": {
+        "type": "string",
+        "enum": [
+          "none",
+          "server"
+        ]
+      },
+      "TextEditResponse": {
+        "type": "object",
+        "required": [
+          "node",
+          "content_sha256",
+          "previous_sha256",
+          "byte_len",
+          "line_count",
+          "edits_applied",
+          "diff",
+          "updated_at"
+        ],
+        "properties": {
+          "byte_len": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "content_sha256": {
+            "type": "string"
+          },
+          "diff": {
+            "type": "string"
+          },
+          "edits_applied": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "line_count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "node": {
+            "$ref": "#/components/schemas/NodeOut"
+          },
+          "previous_sha256": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TextMutationResponse": {
+        "type": "object",
+        "required": [
+          "node",
+          "content_sha256",
+          "byte_len",
+          "line_count",
+          "updated_at"
+        ],
+        "properties": {
+          "byte_len": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "content_sha256": {
+            "type": "string"
+          },
+          "line_count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "node": {
+            "$ref": "#/components/schemas/NodeOut"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TextStorageFormatOut": {
+        "type": "string",
+        "enum": [
+          "plain",
+          "encrypted"
+        ]
+      },
+      "TreeResponse": {
+        "type": "object",
+        "required": [
+          "path",
+          "depth",
+          "nodes",
+          "page"
+        ],
+        "properties": {
+          "depth": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "nodes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NodeSummaryOut"
+            }
+          },
+          "page": {
+            "$ref": "#/components/schemas/PageOut"
+          },
+          "path": {
+            "type": "string"
+          }
+        }
+      },
+      "UploadEncryptionMode": {
+        "type": "string",
+        "enum": [
+          "none",
+          "client"
+        ]
+      },
+      "UploadPartOut": {
+        "type": "object",
+        "required": [
+          "part_number",
+          "url",
+          "headers",
+          "content_length"
+        ],
+        "properties": {
+          "content_length": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Exact number of bytes required for this part."
+          },
+          "headers": {
+            "type": "object",
+            "description": "Headers that must be included in this provider PUT request.",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "part_number": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "UploadTransferOut": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "Upload up to 100 MiB with one HTTP PUT using every returned header.",
+            "required": [
+              "url",
+              "headers",
+              "mode"
+            ],
+            "properties": {
+              "headers": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "propertyNames": {
+                  "type": "string"
+                }
+              },
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "single"
+                ]
+              },
+              "url": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Request part URLs in batches, upload all parts, then submit their ETags to `complete`.",
+            "required": [
+              "part_size",
+              "part_count",
+              "part_url_batch_max",
+              "upload_concurrency_max",
+              "mode"
+            ],
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "multipart"
+                ]
+              },
+              "part_count": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "part_size": {
+                "type": "integer",
+                "format": "int64",
+                "description": "Normal part size in bytes. The final part can be smaller."
+              },
+              "part_url_batch_max": {
+                "type": "integer",
+                "description": "Maximum number of part URLs accepted by one parts request.",
+                "minimum": 0
+              },
+              "upload_concurrency_max": {
+                "type": "integer",
+                "description": "Recommended maximum number of concurrent part uploads.",
+                "minimum": 0
+              }
+            }
+          }
+        ],
+        "description": "Provider transfer mode selected from the declared file size."
+      },
+      "WriteLockSourceOut": {
+        "type": "object",
+        "description": "A node on the ancestor chain with a direct write lock.",
+        "required": [
+          "node_id",
+          "name",
+          "path"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "node_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "path": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "api_key": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "NoteGate ngk_v2_ Agent API key"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "identity",
+      "description": "Agent API-key caller identity"
+    },
+    {
+      "name": "spaces",
+      "description": "Spaces connected to the Agent and their effective permissions"
+    },
+    {
+      "name": "nodes",
+      "description": "Folder, text, and file tree metadata and mutations"
+    },
+    {
+      "name": "text",
+      "description": "Bounded plain-text reads and optimistic-concurrency mutations"
+    },
+    {
+      "name": "files",
+      "description": "Single and multipart transfer through S3-compatible presigned URLs"
+    }
+  ],
+  "externalDocs": {
+    "url": "https://github.com/cagojeiger/notehub",
+    "description": "NoteGate source and specification"
+  }
+}

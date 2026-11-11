@@ -39,8 +39,6 @@ jobs:
       pr_number: ${{ steps.request.outputs.pr_number }}
       run_id: ${{ steps.request.outputs.run_id }}
       attempt: ${{ steps.request.outputs.attempt }}
-      base_ref: ${{ steps.request.outputs.base_ref }}
-      web_artifact_run_id: ${{ steps.request.outputs.web_artifact_run_id }}
       rust_build: ${{ steps.request.outputs.rust_build }}
       rust: ${{ steps.request.outputs.rust }}
       web: ${{ steps.request.outputs.web }}

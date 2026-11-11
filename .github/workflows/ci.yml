@@ -13,8 +13,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: core-ci-${{ fromJSON(inputs.request).request.run_id }}-${{ fromJSON(inputs.request).request.attempt }}
-  cancel-in-progress: false
+  group: core-ci-${{ fromJSON(inputs.request).request.event == 'pull_request' && format('pr-{0}', fromJSON(inputs.request).request.pr_number) || format('run-{0}', fromJSON(inputs.request).request.run_id) }}
+  cancel-in-progress: ${{ fromJSON(inputs.request).request.event == 'pull_request' }}
 
 env:
   CARGO_TERM_COLOR: always
@@ -962,8 +962,7 @@ jobs:
       contents: read
       actions: read
     needs: gate
-    name: Main RustSec Audit
-    if: needs.gate.outputs.source_event == 'push'
+    name: RustSec Audit
     runs-on: ubuntu-26.04
     defaults:
       run:
@@ -1741,3 +1740,93 @@ jobs:
           UI_RESULT: ${{ needs.browser-ui.result }}
           API_RESULT: ${{ needs.browser-api.result }}
         run: test "$UI_RESULT" = success && test "$API_RESULT" = success
+
+  npm-audit:
+    permissions:
+      contents: read
+      actions: read
+    needs: gate
+    name: Npm Audit
+    runs-on: ubuntu-26.04
+    defaults:
+      run:
+        working-directory: source
+    steps:
+      - name: Create scoped core metadata token
+        id: core-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
+        with:
+          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
+          owner: cagojeiger
+          repositories: notehub-core
+          skip-token-revoke: true
+          permission-contents: read
+          permission-actions: read
+          permission-pull-requests: read
+
+      - name: Checkout trusted private CI control
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: cagojeiger/notehub-core
+          ref: ${{ needs.gate.outputs.core_sha }}
+          token: ${{ steps.core-token.outputs.token }}
+          path: .control
+          fetch-depth: 1
+          sparse-checkout: .github
+          persist-credentials: false
+
+      - name: Validate current public CI worker
+        id: worker
+        uses: ./.control/.github/actions/ci-worker-entry
+        with:
+          request: ${{ inputs.request }}
+          kind: ci
+          source-sha: ${{ needs.gate.outputs.tested_sha }}
+          core-token: ${{ steps.core-token.outputs.token }}
+          control-sha: ${{ needs.gate.outputs.core_sha }}
+
+      - name: Ensure core metadata token revoked
+        if: ${{ always() && steps.core-token.outputs.token != '' }}
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        env:
+          CORE_TOKEN: ${{ steps.core-token.outputs.token }}
+        run: |
+          if [ -f "$RUNNER_TEMP/notehub-core-metadata-revoked" ]; then
+            exit 0
+          fi
+          status=$(printf 'header = "Authorization: Bearer %s"\n' "$CORE_TOKEN" | \
+            curl --silent --show-error --connect-timeout 10 --max-time 30 --output /dev/null --write-out '%{http_code}' \
+              --request DELETE --header 'Accept: application/vnd.github+json' \
+              --header 'X-GitHub-Api-Version: 2022-11-28' --config - \
+              https://api.github.com/installation/token)
+          test "$status" = 204
+
+      - name: Checkout exact core source
+        uses: ./.control/.github/actions/checkout-core
+        with:
+          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
+          sha: ${{ needs.gate.outputs.tested_sha }}
+          path: source
+          fetch-depth: 1
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: ${{ hashFiles('source/frontend/package.json') != '' && 'source/frontend/package.json' || 'source/package.json' }}
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ${{ hashFiles('source/frontend/.node-version') != '' && 'source/frontend/.node-version' || 'source/.node-version' }}
+          package-manager-cache: false
+
+      - name: Install dependencies without lifecycle scripts
+        shell: private_run.sh {0}
+        run: pnpm --dir "${{ hashFiles('source/frontend/pnpm-workspace.yaml') != '' && 'frontend' || '.' }}" install --frozen-lockfile --ignore-scripts
+
+      - name: Audit all npm dependencies
+        shell: private_run.sh {0}
+        run: pnpm --dir "${{ hashFiles('source/frontend/pnpm-workspace.yaml') != '' && 'frontend' || '.' }}" audit --audit-level moderate

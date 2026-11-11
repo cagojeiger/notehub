@@ -13,8 +13,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: core-security-dast-${{ fromJSON(inputs.request).request.run_id }}-${{ fromJSON(inputs.request).request.attempt }}
-  cancel-in-progress: false
+  group: core-security-dast-${{ fromJSON(inputs.request).request.event == 'pull_request' && format('pr-{0}', fromJSON(inputs.request).request.pr_number) || format('run-{0}', fromJSON(inputs.request).request.run_id) }}
+  cancel-in-progress: ${{ fromJSON(inputs.request).request.event == 'pull_request' }}
 
 jobs:
   gate:

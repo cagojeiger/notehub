@@ -1,0 +1,225 @@
+name: '[ci][workflow-call][gh-linux] Rust'
+
+on:
+  workflow_call:
+    inputs:
+      core:
+        required: true
+        type: string
+      task:
+        required: true
+        type: string
+      request:
+        required: true
+        type: string
+      core_sha:
+        required: true
+        type: string
+      tested_sha:
+        required: true
+        type: string
+      enabled:
+        type: boolean
+        default: true
+      browser:
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  check:
+    name: Check
+    if: >-
+      inputs.enabled && github.ref == 'refs/heads/main' && github.run_attempt == 1 &&
+      ((github.repository_id == '1437742487' && inputs.core == 'notehub-core' &&
+        contains(fromJSON('[349623475,18637774]'), fromJSON(github.actor_id))) ||
+       (github.repository_id == '1444279727' && inputs.core == 'mossden-core' && github.actor_id == '352203391'))
+    runs-on: ubuntu-26.04
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: ${{ inputs.core == 'notehub-core' && contains(fromJSON('["lint","build","api"]'), inputs.task) && 'postgres:17-alpine' || '' }}
+        env:
+          POSTGRES_USER: notegate
+          POSTGRES_PASSWORD: notegate
+          POSTGRES_DB: notegate
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U notegate -d notegate"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      CI_RUST_TASK: ${{ inputs.task }}
+      CI_RUST_BROWSER: ${{ inputs.browser }}
+      CI_RUST_CONTROL: ${{ github.workspace }}/.control
+    steps:
+      - name: Mint scoped Core reader
+        id: reader
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
+        with:
+          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
+          owner: cagojeiger
+          repositories: ${{ inputs.core }}
+          permission-contents: read
+          permission-actions: read
+          permission-pull-requests: ${{ inputs.core == 'notehub-core' && 'read' || '' }}
+          skip-token-revoke: true
+      - name: Checkout authenticated private control
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: cagojeiger/${{ inputs.core }}
+          ref: ${{ inputs.core_sha }}
+          token: ${{ steps.reader.outputs.token }}
+          path: .control
+          sparse-checkout: |
+            .github
+            deploy/ci
+          persist-credentials: false
+      - name: Validate worker, fetch exact source and revoke reader
+        id: worker
+        env:
+          CORE_TOKEN: ${{ steps.reader.outputs.token }}
+          CORE_READ_TOKEN: ${{ steps.reader.outputs.token }}
+          GH_TOKEN: ${{ github.token }}
+          REQUEST_JSON: ${{ inputs.request }}
+          CI_RUST_KIND: ${{ fromJSON(inputs.request).request.kind }}
+          CORE_CONTROL_SHA: ${{ inputs.core_sha }}
+          TESTED_SHA: ${{ inputs.tested_sha }}
+        run: |
+          (cd .control && bash .github/scripts/ci_rust_run.sh bash .github/scripts/ci_rust_entry.sh)
+      - name: Ensure reader is revoked after setup failure
+        if: always() && steps.reader.outputs.token != ''
+        env:
+          CORE_TOKEN: ${{ steps.reader.outputs.token }}
+        run: |
+          if test -f "$RUNNER_TEMP/rust-reader-revoked"; then exit 0; fi
+          status=$(printf 'header = "Authorization: Bearer %s"\n' "$CORE_TOKEN" |
+            curl --silent --show-error --max-time 15 --output /dev/null --write-out '%{http_code}' \
+              --request DELETE --config - https://api.github.com/installation/token)
+          test "$status" = 204 || test "$status" = 401
+      - name: Checkout fixed Rust security rules
+        if: inputs.task == 'hygiene'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: semgrep/semgrep-rules
+          ref: 16b9e6d45f10649f6a531ec4838ed9924372c3bc
+          path: .rules
+          sparse-checkout: rust/lang/security
+          persist-credentials: false
+      - name: Install source scanners
+        if: inputs.task == 'hygiene'
+        run: bash .control/.github/scripts/setup_security_scanners.sh
+      - name: Install Rust dependency auditor
+        if: inputs.task == 'audit'
+        uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+        with:
+          tool: cargo-audit@0.22.2
+          fallback: none
+      - name: Plan verified crates.io archives
+        if: contains(fromJSON('["lint","build","api"]'), inputs.task)
+        id: archives
+        run: python3 .control/.github/scripts/ci_dependency_cache.py plan --kind cargo >/dev/null 2>&1
+      - name: Restore crates.io archives
+        if: steps.archives.outputs.enabled == 'true'
+        id: archives_restore
+        continue-on-error: true
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.archives.outputs.path }}
+          key: ${{ steps.archives.outputs.key }}
+      - name: Verify and seed archives
+        if: steps.archives.outputs.enabled == 'true'
+        id: archives_prepare
+        run: python3 .control/.github/scripts/ci_dependency_cache.py prepare --kind cargo >/dev/null 2>&1
+      - name: Save archives from main before application execution
+        if: inputs.task == 'build' && fromJSON(inputs.request).request.event == 'push' && steps.archives_prepare.outputs.prepared == 'true' && steps.archives_restore.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.archives.outputs.path }}
+          key: ${{ steps.archives.outputs.key }}
+      - name: Plan compiled public dependencies
+        if: steps.archives_prepare.outputs.prepared == 'true'
+        id: compiled
+        run: python3 .control/.github/scripts/ci_dependency_cache.py plan --kind cargo-target >/dev/null 2>&1
+      - name: Restore compiled public dependencies
+        if: steps.compiled.outputs.enabled == 'true'
+        id: compiled_restore
+        continue-on-error: true
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.compiled.outputs.path }}
+          key: ${{ steps.compiled.outputs.key }}
+      - name: Verify and place compiled dependencies
+        if: steps.compiled_restore.outputs.cache-hit == 'true'
+        id: compiled_prepare
+        run: python3 .control/.github/scripts/ci_dependency_cache.py prepare --kind cargo-target >/dev/null 2>&1
+      - name: Set up pnpm for API probes
+        if: inputs.task == 'api' && hashFiles('source/frontend/package.json') != ''
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: source/frontend/package.json
+      - name: Set up Node for API probes
+        if: inputs.task == 'api' && hashFiles('source/frontend/.node-version') != ''
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: source/frontend/.node-version
+          package-manager-cache: false
+      - name: Prepare project checks
+        run: bash .control/.github/scripts/ci_rust_run.sh make -C source ci-rust-prepare
+      - name: Export compiled public dependencies before tests
+        if: inputs.task == 'build' && fromJSON(inputs.request).request.event == 'push' && steps.compiled.outputs.enabled == 'true' && steps.compiled_restore.outputs.cache-hit != 'true'
+        id: compiled_export
+        run: python3 .control/.github/scripts/ci_dependency_cache.py export --kind cargo-target >/dev/null 2>&1
+      - name: Save compiled public dependencies from main
+        if: steps.compiled_export.outputs.exported == 'true'
+        continue-on-error: true
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.compiled.outputs.path }}
+          key: ${{ steps.compiled.outputs.key }}
+      - name: Install image scanner
+        if: inputs.task == 'build' && inputs.core == 'mossden-core'
+        run: bash .control/deploy/ci/install-trivy.sh
+      - name: Run project checks
+        id: checks
+        run: bash .control/.github/scripts/ci_rust_run.sh make -C source ci-rust-check
+      - name: Collect project diagnostics
+        if: always() && steps.worker.outcome == 'success'
+        run: bash .control/.github/scripts/ci_rust_run.sh make -C source ci-rust-report
+      - name: Retain API load diagnostics
+        if: always() && inputs.task == 'api' && hashFiles('source/browser-e2e/api-load-*') != ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: api-load-diagnostics
+          path: source/browser-e2e/api-load-*
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Retain API test timings
+        if: always() && inputs.task == 'api' && hashFiles('source/browser-e2e/browser-test-timings.json') != ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: browser-api-test-timings
+          path: source/browser-e2e/browser-test-timings.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Retain authentication screenshots
+        if: always() && inputs.task == 'api' && hashFiles('source/frontend/web/test-results/browser-functional/oauth-*.png') != ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: authentication-api
+          path: source/frontend/web/test-results/browser-functional/oauth-*.png
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Clean up project resources
+        if: always() && steps.worker.outcome == 'success'
+        run: bash .control/.github/scripts/ci_rust_run.sh make -C source ci-rust-cleanup
+      - name: Summarize dependency cache
+        if: always() && steps.worker.outcome == 'success' && contains(fromJSON('["lint","build","api"]'), inputs.task)
+        env:
+          ARCHIVES: ${{ format('archives eligible={0}, hit={1}, prepared={2}, reason={3} {4}', steps.archives.outputs.enabled, steps.archives_restore.outputs.cache-hit, steps.archives_prepare.outputs.prepared, steps.archives.outputs.reason, steps.archives_prepare.outputs.reason) }}
+          COMPILED: ${{ format('compiled eligible={0}, hit={1}, prepared={2}, exported={3}, reason={4} {5} {6}', steps.compiled.outputs.enabled, steps.compiled_restore.outputs.cache-hit, steps.compiled_prepare.outputs.prepared, steps.compiled_export.outputs.exported, steps.compiled.outputs.reason, steps.compiled_prepare.outputs.reason, steps.compiled_export.outputs.reason) }}
+        run: printf '%s\n' "$ARCHIVES" "$COMPILED" >> "$GITHUB_STEP_SUMMARY"

@@ -28,7 +28,6 @@ jobs:
     outputs:
       tested_sha: ${{ steps.request.outputs.tested_sha }}
       core_sha: ${{ steps.request.outputs.core_sha }}
-      source_event: ${{ steps.request.outputs.source_event }}
 
     steps:
       - name: Create scoped core metadata token

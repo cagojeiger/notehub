@@ -24,25 +24,27 @@ on:
 concurrency:
   group: release-main
   cancel-in-progress: false
+  queue: max
 
 permissions:
   contents: read
 
 env:
   REGISTRY: ghcr.io
+  REGISTRY_USER: cagojeiger
   IMAGE: cagojeiger/notehub
   DOCKER_BUILD_RECORD_UPLOAD: "false"
   DOCKER_BUILD_SUMMARY: "false"
 
 jobs:
   version:
+    environment: core-read
     name: Validate source and release plan
     if: github.repository_id == '1437742487' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-26.04
     timeout-minutes: 5
     permissions:
       contents: read
-      packages: read
     outputs:
       version: ${{ steps.plan.outputs.version }}
       tag: ${{ steps.plan.outputs.tag }}
@@ -92,6 +94,7 @@ jobs:
         if: ${{ inputs.publish }}
         env:
           GH_TOKEN: ${{ github.token }}
+          REGISTRY_TOKEN: ${{ secrets.GHCR_TOKEN }}
         run: python3 "$GITHUB_WORKSPACE/.control/.github/scripts/private_image_guard.py"
 
       - name: Revoke Release control token
@@ -118,6 +121,7 @@ jobs:
           test "$status" = 204
 
   build:
+    environment: core-read
     name: Build ${{ matrix.platform }}
     needs: version
     if: needs.version.outputs.should_release == 'true'
@@ -125,7 +129,6 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: read
-      packages: write
     strategy:
       fail-fast: true
       matrix:
@@ -197,8 +200,8 @@ jobs:
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ github.token }}
+          username: ${{ env.REGISTRY_USER }}
+          password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Build and push by digest
         id: build
@@ -206,6 +209,7 @@ jobs:
         env:
           PLATFORM: ${{ matrix.platform }}
           GH_TOKEN: ${{ github.token }}
+          REGISTRY_TOKEN: ${{ secrets.GHCR_TOKEN }}
           SOURCE_SHA: ${{ needs.version.outputs.source_sha }}
           SOURCE_TAG: ${{ needs.version.outputs.tag }}
         shell: private_run.sh {0}
@@ -227,6 +231,7 @@ jobs:
           retention-days: 1
 
   scan:
+    environment: core-read
     name: Trivy image gate linux/${{ matrix.arch }}
     needs: [version, build]
     if: needs.version.outputs.should_release == 'true'
@@ -234,7 +239,6 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
-      packages: read
       security-events: write
     strategy:
       fail-fast: false
@@ -296,8 +300,8 @@ jobs:
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ github.token }}
+          username: ${{ env.REGISTRY_USER }}
+          password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Select immutable image
         id: image
@@ -477,6 +481,7 @@ jobs:
           retention-days: 1
 
   release:
+    environment: core-read
     name: Publish verified release
     needs: [version, build, scan, cli]
     if: needs.version.outputs.should_release == 'true'
@@ -484,7 +489,6 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: write
-      packages: write
     steps:
       - name: Create short-lived core read token
         id: core-token
@@ -568,12 +572,13 @@ jobs:
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ github.token }}
+          username: ${{ env.REGISTRY_USER }}
+          password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Validate, stage, verify, and publish approved assets
         env:
           GH_TOKEN: ${{ github.token }}
+          REGISTRY_TOKEN: ${{ secrets.GHCR_TOKEN }}
           CORE_TOKEN: ${{ steps.core-token.outputs.token }}
           SOURCE_TAG: ${{ needs.version.outputs.tag }}
           SOURCE_SHA: ${{ needs.version.outputs.source_sha }}

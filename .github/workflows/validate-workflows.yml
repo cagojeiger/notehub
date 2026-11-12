@@ -31,3 +31,42 @@ jobs:
 
       - name: Validate workflow syntax with official actionlint
         uses: docker://rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 # 1.7.12
+
+  registry-boundary:
+    name: Private registry boundary
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout public verification code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Reject private image access by the public Actions token
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REGISTRY_IMAGE: cagojeiger/notehub
+        run: python3 .github/scripts/check_registry_boundary.py
+
+  registry-auth:
+    name: Protected registry authentication
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: core-read
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout public verification code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify private image access by the protected environment token
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          EXPECT_REGISTRY_ACCESS: 'true'
+          REGISTRY_IMAGE: cagojeiger/notehub
+        run: python3 .github/scripts/check_registry_boundary.py

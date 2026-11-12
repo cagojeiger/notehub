@@ -2,3 +2,9 @@
 self-hosted-runner:
   labels:
     - ubuntu-26.04
+
+# GitHub supports this queue field; actionlint 1.7.12 predates it.
+paths:
+  .github/workflows/release.yml:
+    ignore:
+      - '^unexpected key "queue" for "concurrency" section\. expected one of "cancel-in-progress", "group"$'

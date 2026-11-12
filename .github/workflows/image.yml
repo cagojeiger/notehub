@@ -1,0 +1,316 @@
+name: '[ci][workflow-call][gh-linux] Image'
+
+on:
+  workflow_call:
+    inputs:
+      request:
+        required: true
+        type: string
+      core_sha:
+        required: true
+        type: string
+      tested_sha:
+        required: true
+        type: string
+    secrets:
+      CORE_READ_APP_PRIVATE_KEY:
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  CARGO_TERM_COLOR: always
+  DOCKER_BUILD_RECORD_UPLOAD: 'false'
+  DOCKER_BUILD_SUMMARY: 'false'
+
+jobs:
+  image-pr:
+    if: fromJSON(inputs.request).request.event == 'pull_request'
+    name: PR Image Gate
+    runs-on: ubuntu-26.04
+    defaults:
+      run:
+        working-directory: source
+    timeout-minutes: 45
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Create scoped core metadata token
+        id: core-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
+        with:
+          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
+          owner: cagojeiger
+          repositories: notehub-core
+          skip-token-revoke: true
+          permission-contents: read
+          permission-actions: read
+          permission-pull-requests: read
+
+      - name: Checkout trusted private CI control
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: cagojeiger/notehub-core
+          ref: ${{ inputs.core_sha }}
+          token: ${{ steps.core-token.outputs.token }}
+          path: .control
+          fetch-depth: 1
+          sparse-checkout: .github
+          persist-credentials: false
+
+      - name: Validate current public CI worker
+        id: worker
+        uses: ./.control/.github/actions/ci-worker-entry
+        with:
+          request: ${{ inputs.request }}
+          kind: ci
+          source-sha: ${{ inputs.tested_sha }}
+          core-token: ${{ steps.core-token.outputs.token }}
+          control-sha: ${{ inputs.core_sha }}
+
+      - name: Ensure core metadata token revoked
+        if: ${{ always() && steps.core-token.outputs.token != '' }}
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        env:
+          CORE_TOKEN: ${{ steps.core-token.outputs.token }}
+        run: |
+          if [ -f "$RUNNER_TEMP/notehub-core-metadata-revoked" ]; then
+            exit 0
+          fi
+          status=$(printf 'header = "Authorization: Bearer %s"\n' "$CORE_TOKEN" | \
+            curl --silent --show-error --connect-timeout 10 --max-time 30 --output /dev/null --write-out '%{http_code}' \
+              --request DELETE --header 'Accept: application/vnd.github+json' \
+              --header 'X-GitHub-Api-Version: 2022-11-28' --config - \
+              https://api.github.com/installation/token)
+          test "$status" = 204
+
+      - name: Checkout exact core source
+        uses: ./.control/.github/actions/checkout-core
+        with:
+          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
+          sha: ${{ inputs.tested_sha }}
+          path: source
+          fetch-depth: 1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        with:
+          cache-binary: false
+
+      - name: Plan image dependency cache
+        id: image-cache-plan
+        shell: private_run.sh {0}
+        run: python3 "$GITHUB_WORKSPACE/.control/.github/scripts/ci_dependency_cache.py" plan --kind cargo-target-image
+
+      - name: Restore image dependencies
+        id: image-cache-restore
+        if: steps.image-cache-plan.outputs.enabled == 'true'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.image-cache-plan.outputs.path }}
+          key: ${{ steps.image-cache-plan.outputs.key }}
+
+      - name: Prepare verified image dependencies
+        id: image-cache-prepare
+        if: steps.image-cache-plan.outputs.enabled == 'true' && steps.image-cache-restore.outputs.cache-hit == 'true'
+        shell: private_run.sh {0}
+        run: python3 "$GITHUB_WORKSPACE/.control/.github/scripts/ci_dependency_cache.py" prepare --kind cargo-target-image
+
+      - name: Build PR image locally
+        env:
+          SOURCE_SHA: ${{ inputs.tested_sha }}
+        shell: private_run.sh {0}
+        run: bash "$GITHUB_WORKSPACE/.control/.github/scripts/ci_pr_image_build.sh"
+
+      - name: Install verified Trivy release
+        shell: private_run.sh {0}
+        run: |
+          trivy_dir="$RUNNER_TEMP/trivy-release"
+          mkdir -p "$trivy_dir"
+          curl --fail --location --retry 3 --retry-all-errors --connect-timeout 15 --max-time 120 \
+            --output "$trivy_dir/trivy.tar.gz" \
+            https://github.com/aquasecurity/trivy/releases/download/v0.74.0/trivy_0.74.0_Linux-64bit.tar.gz
+          echo "2ae6fe3ee734b7fdf11335663e18c75ea12dccc76062f09f164a3b0f8be4371a  $trivy_dir/trivy.tar.gz" | sha256sum --check --strict
+          tar -xzf "$trivy_dir/trivy.tar.gz" -C "$trivy_dir" trivy
+          "$trivy_dir/trivy" --version
+          echo "$trivy_dir" >> "$GITHUB_PATH"
+
+      - name: Report high and critical vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          TRIVY_IMAGE_SRC: docker
+        with:
+          version: v0.74.0
+          skip-setup-trivy: true
+          cache: false
+          image-ref: notegate-pr:${{ inputs.tested_sha }}
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          format: json
+          output: source/trivy.json
+          ignore-unfixed: false
+          exit-code: "0"
+          timeout: 10m
+
+      - name: Summarize image findings
+        shell: private_run.sh {0}
+        run: bash "$GITHUB_WORKSPACE/.control/.github/scripts/ci_pr_image_summary.sh"
+
+      - name: Retain scan report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pr-image-trivy
+          path: source/trivy.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Block fixable critical vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          TRIVY_IMAGE_SRC: docker
+        with:
+          version: v0.74.0
+          skip-setup-trivy: true
+          cache: false
+          image-ref: notegate-pr:${{ inputs.tested_sha }}
+          scanners: vuln
+          severity: CRITICAL
+          format: table
+          ignore-unfixed: true
+          exit-code: "1"
+          timeout: 10m
+
+      - name: Summarize dependency cache decisions
+        id: cache_report
+        if: ${{ steps.worker.outcome == 'success' && (always()) }}
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        env:
+          CACHE_IMAGE: ${{ format('image eligible={0}, hit={1}, prepared={2}, plan reason={3}, prepare reason={4}', steps.image-cache-plan.outputs.enabled, steps.image-cache-restore.outputs.cache-hit, steps.image-cache-prepare.outputs.prepared, steps.image-cache-plan.outputs.reason, steps.image-cache-prepare.outputs.reason) }}
+        run: printf '%s\n' '### Dependency cache' "$CACHE_IMAGE" >> "$GITHUB_STEP_SUMMARY"
+
+  image-deps:
+    if: fromJSON(inputs.request).request.event == 'push'
+    name: Image Dependencies
+    runs-on: ubuntu-26.04
+    defaults:
+      run:
+        working-directory: source
+    timeout-minutes: 45
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Create scoped core metadata token
+        id: core-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
+        with:
+          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
+          owner: cagojeiger
+          repositories: notehub-core
+          skip-token-revoke: true
+          permission-contents: read
+          permission-actions: read
+          permission-pull-requests: read
+
+      - name: Checkout trusted private CI control
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: cagojeiger/notehub-core
+          ref: ${{ inputs.core_sha }}
+          token: ${{ steps.core-token.outputs.token }}
+          path: .control
+          fetch-depth: 1
+          sparse-checkout: .github
+          persist-credentials: false
+
+      - name: Validate current public CI worker
+        id: worker
+        uses: ./.control/.github/actions/ci-worker-entry
+        with:
+          request: ${{ inputs.request }}
+          kind: ci
+          source-sha: ${{ inputs.tested_sha }}
+          core-token: ${{ steps.core-token.outputs.token }}
+          control-sha: ${{ inputs.core_sha }}
+
+      - name: Ensure core metadata token revoked
+        if: ${{ always() && steps.core-token.outputs.token != '' }}
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        env:
+          CORE_TOKEN: ${{ steps.core-token.outputs.token }}
+        run: |
+          if [ -f "$RUNNER_TEMP/notehub-core-metadata-revoked" ]; then
+            exit 0
+          fi
+          status=$(printf 'header = "Authorization: Bearer %s"\n' "$CORE_TOKEN" | \
+            curl --silent --show-error --connect-timeout 10 --max-time 30 --output /dev/null --write-out '%{http_code}' \
+              --request DELETE --header 'Accept: application/vnd.github+json' \
+              --header 'X-GitHub-Api-Version: 2022-11-28' --config - \
+              https://api.github.com/installation/token)
+          test "$status" = 204
+
+      - name: Checkout exact core source
+        uses: ./.control/.github/actions/checkout-core
+        with:
+          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
+          sha: ${{ inputs.tested_sha }}
+          path: source
+          fetch-depth: 1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        with:
+          cache-binary: false
+
+      - name: Plan image dependency cache
+        id: image-cache-plan
+        shell: private_run.sh {0}
+        run: python3 "$GITHUB_WORKSPACE/.control/.github/scripts/ci_dependency_cache.py" plan --kind cargo-target-image
+
+      - name: Check image dependency cache
+        id: image-cache-restore
+        if: steps.image-cache-plan.outputs.enabled == 'true'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.image-cache-plan.outputs.path }}
+          key: ${{ steps.image-cache-plan.outputs.key }}
+          lookup-only: true
+
+      - name: Build image dependencies from core main
+        id: image-cache-build
+        if: ${{ fromJSON(inputs.request).request.event == 'push' && steps.image-cache-plan.outputs.enabled == 'true' && steps.image-cache-restore.outputs.cache-hit != 'true' }}
+        shell: private_run.sh {0}
+        run: bash "$GITHUB_WORKSPACE/.control/.github/scripts/ci_image_deps_build.sh"
+
+      - name: Export image dependencies from core main
+        id: image-cache-export
+        if: ${{ fromJSON(inputs.request).request.event == 'push' && steps.image-cache-plan.outputs.enabled == 'true' && steps.image-cache-restore.outputs.cache-hit != 'true' }}
+        shell: private_run.sh {0}
+        run: python3 "$GITHUB_WORKSPACE/.control/.github/scripts/ci_dependency_cache.py" export --kind cargo-target-image
+
+      - name: Save image dependencies from core main
+        id: image-cache-save
+        if: ${{ fromJSON(inputs.request).request.event == 'push' && steps.image-cache-plan.outputs.enabled == 'true' && steps.image-cache-restore.outputs.cache-hit != 'true' && steps.image-cache-export.outputs.exported == 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.image-cache-plan.outputs.path }}
+          key: ${{ steps.image-cache-plan.outputs.key }}
+
+      - name: Summarize dependency cache decisions
+        id: cache_report
+        if: ${{ steps.worker.outcome == 'success' && (always()) }}
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        env:
+          CACHE_IMAGE: ${{ format('image eligible={0}, hit={1}, plan reason={2}, exported={3}, export reason={4}', steps.image-cache-plan.outputs.enabled, steps.image-cache-restore.outputs.cache-hit, steps.image-cache-plan.outputs.reason, steps.image-cache-export.outputs.exported, steps.image-cache-export.outputs.reason) }}
+        run: printf '%s\n' '### Dependency cache' "$CACHE_IMAGE" >> "$GITHUB_STEP_SUMMARY"

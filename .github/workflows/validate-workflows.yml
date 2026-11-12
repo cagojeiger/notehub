@@ -32,6 +32,9 @@ jobs:
       - name: Validate workflow syntax with official actionlint
         uses: docker://rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 # 1.7.12
 
+      - name: Validate execution plan and native result gate
+        run: python3 -B -m unittest discover -s .github/scripts -p 'test_ci_result.py' -v
+
   registry-boundary:
     name: Private registry boundary
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

@@ -1,0 +1,205 @@
+name: '[security][workflow-call][gh-linux] DAST'
+
+on:
+  workflow_call:
+    inputs:
+      request:
+        required: true
+        type: string
+      core_sha:
+        required: true
+        type: string
+      tested_sha:
+        required: true
+        type: string
+    secrets:
+      CORE_READ_APP_PRIVATE_KEY:
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  CARGO_TERM_COLOR: always
+  DOCKER_BUILD_RECORD_UPLOAD: 'false'
+  DOCKER_BUILD_SUMMARY: 'false'
+
+jobs:
+  pilot:
+    permissions:
+      contents: read
+      actions: read
+    name: Isolated adversarial scenarios
+    runs-on: ubuntu-26.04
+    defaults:
+      run:
+        working-directory: source
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: notegate
+          POSTGRES_PASSWORD: notegate
+          POSTGRES_DB: notegate
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U notegate -d notegate"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      SOURCE_SHA: ${{ inputs.tested_sha }}
+      NOTEGATE_DATABASE_URL: postgres://notegate:notegate@localhost:5432/notegate
+      NOTEGATE_OIDC__ISSUER: http://127.0.0.1:9192
+      NOTEGATE_OIDC__CLIENT_ID: notegate-web
+      NOTEGATE_PUBLIC_URL: http://127.0.0.1:9191
+      NOTEGATE_BIND_ADDR: 0.0.0.0:9191
+      NOTEGATE_CLI_OAUTH_CLIENT_ID: notegate-cli-local
+      NOTEGATE_ENC_ROOT_KEY_ID: e2e-enc
+      NOTEGATE_ENC_ROOT_SECRET: e2e-distinct-enc-root-secret-32-bytes
+      NOTEGATE_LOOKUP_ROOT_KEY_ID: e2e-lookup
+      NOTEGATE_LOOKUP_ROOT_SECRET: e2e-distinct-lookup-root-secret-32b
+      NOTEGATE_S3__ENDPOINT: http://127.0.0.1:9000
+      NOTEGATE_S3__PUBLIC_ENDPOINT: http://127.0.0.1:9000
+      NOTEGATE_S3__REGION: us-east-1
+      NOTEGATE_S3__BUCKET: notegate-e2e
+      NOTEGATE_S3__ACCESS_KEY: notegate-app
+      NOTEGATE_S3__SECRET_KEY: notegate-app-secret
+      NOTEGATE_S3__FORCE_PATH_STYLE: "true"
+      NOTEGATE_WEB_DIST_DIR: ${{ github.workspace }}/source/frontend/web/dist
+
+    steps:
+      - name: Create scoped core metadata token
+        id: core-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
+        with:
+          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
+          owner: cagojeiger
+          repositories: notehub-core
+          skip-token-revoke: true
+          permission-contents: read
+          permission-actions: read
+          permission-pull-requests: read
+
+      - name: Checkout trusted private CI control
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: cagojeiger/notehub-core
+          ref: ${{ inputs.core_sha }}
+          token: ${{ steps.core-token.outputs.token }}
+          path: .control
+          fetch-depth: 1
+          sparse-checkout: .github
+          persist-credentials: false
+
+      - name: Validate current public CI worker
+        id: worker
+        uses: ./.control/.github/actions/ci-worker-entry
+        with:
+          request: ${{ inputs.request }}
+          kind: security-dast
+          source-sha: ${{ inputs.tested_sha }}
+          core-token: ${{ steps.core-token.outputs.token }}
+          control-sha: ${{ inputs.core_sha }}
+
+      - name: Ensure core metadata token revoked
+        if: ${{ always() && steps.core-token.outputs.token != '' }}
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        env:
+          CORE_TOKEN: ${{ steps.core-token.outputs.token }}
+        run: |
+          if [ -f "$RUNNER_TEMP/notehub-core-metadata-revoked" ]; then
+            exit 0
+          fi
+          status=$(printf 'header = "Authorization: Bearer %s"\n' "$CORE_TOKEN" | \
+            curl --silent --show-error --connect-timeout 10 --max-time 30 --output /dev/null --write-out '%{http_code}' \
+              --request DELETE --header 'Accept: application/vnd.github+json' \
+              --header 'X-GitHub-Api-Version: 2022-11-28' --config - \
+              https://api.github.com/installation/token)
+          test "$status" = 204
+
+      - name: Checkout exact core source
+        uses: ./.control/.github/actions/checkout-core
+        with:
+          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
+          sha: ${{ inputs.tested_sha }}
+          path: source
+          fetch-depth: 1
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: ${{ hashFiles('source/frontend/package.json') != '' && 'source/frontend/package.json' || 'source/package.json' }}
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ${{ hashFiles('source/frontend/.node-version') != '' && 'source/frontend/.node-version' || 'source/.node-version' }}
+          package-manager-cache: false
+
+      - name: Build application and browser probes
+        shell: private_run.sh {0}
+        run: source "$GITHUB_WORKSPACE/.control/.github/scripts/ci_dast_build.sh"
+
+      - name: Start disposable object storage
+        env:
+          NOTEGATE_S3_BUCKET: ${{ env.NOTEGATE_S3__BUCKET }}
+          NOTEGATE_S3_ACCESS_KEY: ${{ env.NOTEGATE_S3__ACCESS_KEY }}
+          NOTEGATE_S3_SECRET_KEY: ${{ env.NOTEGATE_S3__SECRET_KEY }}
+        shell: private_run.sh {0}
+        run: bash deploy/ci/start-minio.sh
+
+      - name: Seed two disposable owners
+        id: identity
+        shell: bash
+        run: source "$GITHUB_WORKSPACE/.control/.github/scripts/ci_seed_dast_identities.sh"
+
+      - name: Start disposable application
+        id: app
+        shell: private_run.sh {0}
+        run: source "$GITHUB_WORKSPACE/.control/.github/scripts/ci_dast_start.sh"
+
+      - name: Probe ownership and read-only permissions over HTTP
+        id: api
+        timeout-minutes: 5
+        env:
+          NOTEGATE_DAST_BROWSER_SESSION_A: ${{ steps.identity.outputs.session_A }}
+          NOTEGATE_DAST_BROWSER_SESSION_B: ${{ steps.identity.outputs.session_B }}
+          NOTEGATE_DAST_API_KEY_A: ${{ steps.identity.outputs.key_A }}
+          NOTEGATE_DAST_API_KEY_B: ${{ steps.identity.outputs.key_B }}
+          NOTEGATE_DAST_ACCOUNT_ID_A: ${{ steps.identity.outputs.account_A }}
+          NOTEGATE_DAST_ACCOUNT_ID_B: ${{ steps.identity.outputs.account_B }}
+        shell: private_run.sh {0}
+        run: node deploy/ci/security-api.mjs
+
+      - name: Probe malicious document rendering in a real browser
+        if: ${{ steps.worker.outcome == 'success' && (!cancelled() && steps.app.outcome == 'success') }}
+        timeout-minutes: 6
+        env:
+          NOTEGATE_DAST_BROWSER_SESSION_A: ${{ steps.identity.outputs.session_A }}
+        shell: private_run.sh {0}
+        run: pnpm --dir "${{ hashFiles('source/frontend/pnpm-workspace.yaml') != '' && 'frontend' || '.' }}" --filter web exec playwright test --config playwright.security.config.ts
+
+      - name: Run bounded authenticated ZAP active scan
+        if: ${{ steps.worker.outcome == 'success' && (!cancelled() && steps.app.outcome == 'success' && steps.api.outcome != 'skipped') }}
+        timeout-minutes: 12
+        env:
+          NOTEGATE_DAST_API_KEY_A: ${{ steps.identity.outputs.key_A }}
+        shell: private_run.sh {0}
+        run: GITHUB_SHA="$SOURCE_SHA" node deploy/ci/security-zap.mjs
+
+      - name: Publish sanitized findings
+        if: ${{ steps.worker.outcome == 'success' && (always()) }}
+        shell: private_run.sh {0}
+        run: source "$GITHUB_WORKSPACE/.control/.github/scripts/ci_dast_report.sh"
+
+      - name: Stop scanner and application
+        if: ${{ steps.worker.outcome == 'success' && (always()) }}
+        shell: private_run.sh {0}
+        run: source "$GITHUB_WORKSPACE/.control/.github/scripts/ci_dast_cleanup.sh"

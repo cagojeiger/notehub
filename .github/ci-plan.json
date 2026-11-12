@@ -1,0 +1,79 @@
+{
+  "ci": {
+    "source": {
+      "name": "Source Checks",
+      "workflow": "source-checks.yml"
+    },
+    "rust-lint": {
+      "name": "Rust Lint",
+      "workflow": "rust.yml",
+      "task": "lint",
+      "selection": "rust"
+    },
+    "rust-build": {
+      "name": "Rust Build",
+      "workflow": "rust.yml",
+      "task": "build",
+      "selection": "rust"
+    },
+    "rust-api": {
+      "name": "Rust API",
+      "workflow": "rust.yml",
+      "task": "api",
+      "selection": "rust_build"
+    },
+    "postgres18": {
+      "name": "PostgreSQL 18",
+      "workflow": "rust.yml",
+      "task": "postgres18",
+      "selection": "postgres"
+    },
+    "rust-audit": {
+      "name": "RustSec Audit",
+      "workflow": "rust.yml",
+      "task": "audit"
+    },
+    "web": {
+      "name": "Web",
+      "workflow": "web.yml",
+      "selection": "web"
+    },
+    "image": {
+      "name": "Image",
+      "workflow": "image.yml",
+      "selection": "image"
+    },
+    "browser-ui": {
+      "name": "Browser UI",
+      "workflow": "browser.yml",
+      "selection": "browser"
+    },
+    "npm-audit": {
+      "name": "Npm Audit",
+      "workflow": "npm-audit.yml"
+    }
+  },
+  "dependency-security": {
+    "rust-audit": {
+      "name": "RustSec Audit",
+      "workflow": "rust.yml",
+      "task": "audit"
+    },
+    "npm-audit": {
+      "name": "Npm Audit",
+      "workflow": "npm-audit.yml"
+    }
+  },
+  "security-dast": {
+    "dast": {
+      "name": "DAST",
+      "workflow": "dast.yml"
+    }
+  },
+  "private-image": {
+    "scan": {
+      "name": "Private Image",
+      "workflow": "private-scan.yml"
+    }
+  }
+}

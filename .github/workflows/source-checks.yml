@@ -1,0 +1,232 @@
+name: '[ci][workflow-call][gh-linux] Source Checks'
+
+on:
+  workflow_call:
+    inputs:
+      request:
+        required: true
+        type: string
+      core_sha:
+        required: true
+        type: string
+      tested_sha:
+        required: true
+        type: string
+      checks:
+        required: true
+        type: string
+    secrets:
+      CORE_READ_APP_PRIVATE_KEY:
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  CARGO_TERM_COLOR: always
+  DOCKER_BUILD_RECORD_UPLOAD: 'false'
+  DOCKER_BUILD_SUMMARY: 'false'
+
+jobs:
+  security:
+    permissions:
+      contents: read
+      actions: read
+    name: Source Security
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    steps:
+      - name: Create scoped core metadata token
+        id: core-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
+        with:
+          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
+          owner: cagojeiger
+          repositories: notehub-core
+          skip-token-revoke: true
+          permission-contents: read
+          permission-actions: read
+          permission-pull-requests: read
+
+      - name: Checkout trusted private CI control
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: cagojeiger/notehub-core
+          ref: ${{ inputs.core_sha }}
+          token: ${{ steps.core-token.outputs.token }}
+          path: .control
+          fetch-depth: 1
+          sparse-checkout: .github
+          persist-credentials: false
+
+      - name: Validate current public CI worker
+        id: worker
+        uses: ./.control/.github/actions/ci-worker-entry
+        with:
+          request: ${{ inputs.request }}
+          kind: ci
+          source-sha: ${{ inputs.tested_sha }}
+          core-token: ${{ steps.core-token.outputs.token }}
+          control-sha: ${{ inputs.core_sha }}
+
+      - name: Ensure core metadata token revoked
+        if: ${{ always() && steps.core-token.outputs.token != '' }}
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        env:
+          CORE_TOKEN: ${{ steps.core-token.outputs.token }}
+        run: |
+          if [ -f "$RUNNER_TEMP/notehub-core-metadata-revoked" ]; then
+            exit 0
+          fi
+          status=$(printf 'header = "Authorization: Bearer %s"\n' "$CORE_TOKEN" | \
+            curl --silent --show-error --connect-timeout 10 --max-time 30 --output /dev/null --write-out '%{http_code}' \
+              --request DELETE --header 'Accept: application/vnd.github+json' \
+              --header 'X-GitHub-Api-Version: 2022-11-28' --config - \
+              https://api.github.com/installation/token)
+          test "$status" = 204
+
+      - name: Checkout public workflow metadata
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: cagojeiger/notehub
+          ref: ${{ github.sha }}
+          token: ${{ github.token }}
+          path: .public-control
+          persist-credentials: false
+
+      - name: Set up pinned local scanners
+        uses: ./.control/.github/actions/setup-security-scanners
+
+      - name: Checkout exact core source
+        uses: ./.control/.github/actions/checkout-core
+        with:
+          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
+          sha: ${{ inputs.tested_sha }}
+          path: source
+
+      - name: Validate public CI contracts with private control
+        shell: private_run.sh {0}
+        working-directory: ${{ github.workspace }}
+        run: |
+          python3 "$GITHUB_WORKSPACE/.control/.github/scripts/check_public_ci.py" \
+            --public-root "$GITHUB_WORKSPACE/.public-control" \
+            --private-control-root "$GITHUB_WORKSPACE/.control"
+
+      - name: Verify pinned scanner compatibility
+        shell: private_run.sh {0}
+        working-directory: ${{ github.workspace }}
+        run: bash "$GITHUB_WORKSPACE/.control/.github/scripts/ci_scanner_smoke.sh"
+
+      - name: Verify private-output shell behavior
+        shell: private_run.sh {0}
+        working-directory: ${{ github.workspace }}
+        run: bash "$GITHUB_WORKSPACE/.control/.github/scripts/ci_private_shell_smoke.sh"
+
+      - name: Check source security without publishing source diagnostics
+        shell: bash
+        run: source "$GITHUB_WORKSPACE/.control/.github/scripts/ci_source_security.sh"
+
+  hygiene:
+    permissions:
+      contents: read
+      actions: read
+    name: Hygiene
+    runs-on: ubuntu-26.04
+    defaults:
+      run:
+        working-directory: source
+    steps:
+      - name: Create scoped core metadata token
+        id: core-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
+        with:
+          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
+          owner: cagojeiger
+          repositories: notehub-core
+          skip-token-revoke: true
+          permission-contents: read
+          permission-actions: read
+          permission-pull-requests: read
+
+      - name: Checkout trusted private CI control
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: cagojeiger/notehub-core
+          ref: ${{ inputs.core_sha }}
+          token: ${{ steps.core-token.outputs.token }}
+          path: .control
+          fetch-depth: 1
+          sparse-checkout: .github
+          persist-credentials: false
+
+      - name: Validate current public CI worker
+        id: worker
+        uses: ./.control/.github/actions/ci-worker-entry
+        with:
+          request: ${{ inputs.request }}
+          kind: ci
+          source-sha: ${{ inputs.tested_sha }}
+          core-token: ${{ steps.core-token.outputs.token }}
+          control-sha: ${{ inputs.core_sha }}
+
+      - name: Ensure core metadata token revoked
+        if: ${{ always() && steps.core-token.outputs.token != '' }}
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        env:
+          CORE_TOKEN: ${{ steps.core-token.outputs.token }}
+        run: |
+          if [ -f "$RUNNER_TEMP/notehub-core-metadata-revoked" ]; then
+            exit 0
+          fi
+          status=$(printf 'header = "Authorization: Bearer %s"\n' "$CORE_TOKEN" | \
+            curl --silent --show-error --connect-timeout 10 --max-time 30 --output /dev/null --write-out '%{http_code}' \
+              --request DELETE --header 'Accept: application/vnd.github+json' \
+              --header 'X-GitHub-Api-Version: 2022-11-28' --config - \
+              https://api.github.com/installation/token)
+          test "$status" = 204
+
+      - name: Checkout exact core source
+        uses: ./.control/.github/actions/checkout-core
+        with:
+          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
+          sha: ${{ inputs.tested_sha }}
+          path: source
+          fetch-depth: 2
+
+      - name: Select CI checks
+        env:
+          RUST_BUILD: ${{ fromJSON(inputs.checks).rust_build }}
+          RUST: ${{ fromJSON(inputs.checks).rust }}
+          WEB: ${{ fromJSON(inputs.checks).web }}
+          BROWSER: ${{ fromJSON(inputs.checks).browser }}
+          POSTGRES: ${{ fromJSON(inputs.checks).postgres }}
+          IMAGE: ${{ fromJSON(inputs.checks).image }}
+          IMPACT_SCOPE: ${{ fromJSON(inputs.checks).impact_scope }}
+          IMPACT_REASON: ${{ fromJSON(inputs.checks).impact_reason }}
+        shell: private_run.sh {0}
+        run: source "$GITHUB_WORKSPACE/.control/.github/scripts/ci_hygiene_impact.sh"
+
+      - name: Install actionlint
+        env:
+          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+        shell: private_run.sh {0}
+        run: source "$GITHUB_WORKSPACE/.control/.github/scripts/ci_hygiene_install_actionlint.sh"
+
+      - name: Workflow checks
+        shell: private_run.sh {0}
+        run: source "$GITHUB_WORKSPACE/.control/.github/scripts/ci_hygiene_workflow_check.sh"
+
+      - name: Format
+        shell: private_run.sh {0}
+        run: source "$GITHUB_WORKSPACE/.control/.github/scripts/ci_hygiene_fmt.sh"
+
+      - name: Diff check
+        shell: private_run.sh {0}
+        run: source "$GITHUB_WORKSPACE/.control/.github/scripts/ci_hygiene_diff.sh"

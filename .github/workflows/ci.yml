@@ -34,11 +34,6 @@ jobs:
       tested_sha: ${{ steps.request.outputs.tested_sha }}
       core_sha: ${{ steps.request.outputs.core_sha }}
       source_event: ${{ steps.request.outputs.source_event }}
-      head_sha: ${{ steps.request.outputs.head_sha }}
-      base_sha: ${{ steps.request.outputs.base_sha }}
-      pr_number: ${{ steps.request.outputs.pr_number }}
-      run_id: ${{ steps.request.outputs.run_id }}
-      attempt: ${{ steps.request.outputs.attempt }}
       rust_build: ${{ steps.request.outputs.rust_build }}
       rust: ${{ steps.request.outputs.rust }}
       web: ${{ steps.request.outputs.web }}
@@ -221,14 +216,6 @@ jobs:
     defaults:
       run:
         working-directory: source
-    outputs:
-      rust_build: ${{ steps.impact.outputs.rust_build }}
-      rust: ${{ steps.impact.outputs.rust }}
-      web: ${{ steps.impact.outputs.web }}
-      browser: ${{ steps.impact.outputs.browser }}
-      postgres: ${{ steps.impact.outputs.postgres }}
-      image: ${{ steps.impact.outputs.image }}
-
     steps:
       - name: Create scoped core metadata token
         id: core-token
@@ -291,7 +278,6 @@ jobs:
           fetch-depth: 2
 
       - name: Select CI checks
-        id: impact
         env:
           RUST_BUILD: ${{ needs.gate.outputs.rust_build }}
           RUST: ${{ needs.gate.outputs.rust }}

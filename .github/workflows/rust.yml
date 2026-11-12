@@ -18,6 +18,9 @@ on:
       tested_sha:
         required: true
         type: string
+      enabled:
+        type: boolean
+        default: true
       browser:
         type: boolean
         default: false
@@ -30,7 +33,7 @@ jobs:
   check:
     name: Check
     if: >-
-      github.ref == 'refs/heads/main' && github.run_attempt == 1 &&
+      inputs.enabled && github.ref == 'refs/heads/main' && github.run_attempt == 1 &&
       ((github.repository_id == '1437742487' && inputs.core == 'notehub-core' &&
         contains(fromJSON('[349623475,18637774]'), fromJSON(github.actor_id))) ||
        (github.repository_id == '1444279727' && inputs.core == 'mossden-core' && github.actor_id == '352203391'))

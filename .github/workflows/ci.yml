@@ -314,11 +314,11 @@ jobs:
       contents: read
       actions: read
     needs: [gate]
-    if: needs.gate.outputs.rust == 'true'
     uses: cagojeiger/notehub/.github/workflows/rust.yml@main
     with:
       core: notehub-core
       task: lint
+      enabled: ${{ needs.gate.outputs.rust == 'true' }}
       request: ${{ inputs.request }}
       core_sha: ${{ needs.gate.outputs.core_sha }}
       tested_sha: ${{ needs.gate.outputs.tested_sha }}
@@ -330,11 +330,11 @@ jobs:
       contents: read
       actions: read
     needs: [gate]
-    if: needs.gate.outputs.rust == 'true'
     uses: cagojeiger/notehub/.github/workflows/rust.yml@main
     with:
       core: notehub-core
       task: build
+      enabled: ${{ needs.gate.outputs.rust == 'true' }}
       request: ${{ inputs.request }}
       core_sha: ${{ needs.gate.outputs.core_sha }}
       tested_sha: ${{ needs.gate.outputs.tested_sha }}
@@ -346,11 +346,11 @@ jobs:
       contents: read
       actions: read
     needs: [gate]
-    if: needs.gate.outputs.rust_build == 'true'
     uses: cagojeiger/notehub/.github/workflows/rust.yml@main
     with:
       core: notehub-core
       task: api
+      enabled: ${{ needs.gate.outputs.rust_build == 'true' }}
       request: ${{ inputs.request }}
       core_sha: ${{ needs.gate.outputs.core_sha }}
       tested_sha: ${{ needs.gate.outputs.tested_sha }}
@@ -431,11 +431,11 @@ jobs:
       contents: read
       actions: read
     needs: [gate]
-    if: needs.gate.outputs.postgres == 'true'
     uses: cagojeiger/notehub/.github/workflows/rust.yml@main
     with:
       core: notehub-core
       task: postgres18
+      enabled: ${{ needs.gate.outputs.postgres == 'true' }}
       request: ${{ inputs.request }}
       core_sha: ${{ needs.gate.outputs.core_sha }}
       tested_sha: ${{ needs.gate.outputs.tested_sha }}

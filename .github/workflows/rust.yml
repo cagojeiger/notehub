@@ -119,7 +119,7 @@ jobs:
           tool: cargo-audit@0.22.2
           fallback: none
       - name: Plan verified crates.io archives
-        if: contains(fromJSON('["lint","build","api"]'), inputs.task)
+        if: contains(fromJSON('["lint","build","api"]'), inputs.task) || (inputs.core == 'notehub-core' && inputs.task == 'postgres18')
         id: archives
         run: python3 .control/.github/scripts/ci_dependency_cache.py plan --kind cargo >/dev/null 2>&1
       - name: Restore crates.io archives
@@ -218,7 +218,7 @@ jobs:
         if: always() && steps.worker.outcome == 'success'
         run: bash .control/.github/scripts/ci_rust_run.sh make -C source ci-rust-cleanup
       - name: Summarize dependency cache
-        if: always() && steps.worker.outcome == 'success' && contains(fromJSON('["lint","build","api"]'), inputs.task)
+        if: always() && steps.worker.outcome == 'success' && (contains(fromJSON('["lint","build","api"]'), inputs.task) || (inputs.core == 'notehub-core' && inputs.task == 'postgres18'))
         env:
           ARCHIVES: ${{ format('archives eligible={0}, hit={1}, prepared={2}, reason={3} {4}', steps.archives.outputs.enabled, steps.archives_restore.outputs.cache-hit, steps.archives_prepare.outputs.prepared, steps.archives.outputs.reason, steps.archives_prepare.outputs.reason) }}
           COMPILED: ${{ format('compiled eligible={0}, hit={1}, prepared={2}, exported={3}, reason={4} {5} {6}', steps.compiled.outputs.enabled, steps.compiled_restore.outputs.cache-hit, steps.compiled_prepare.outputs.prepared, steps.compiled_export.outputs.exported, steps.compiled.outputs.reason, steps.compiled_prepare.outputs.reason, steps.compiled_export.outputs.reason) }}

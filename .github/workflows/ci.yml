@@ -490,6 +490,16 @@ jobs:
         shell: private_run.sh {0}
         run: source "$GITHUB_WORKSPACE/.control/.github/scripts/ci_rust_build_test.sh"
 
+      - name: Summarize dependency cache decisions
+        id: cache_report
+        if: ${{ steps.worker.outcome == 'success' && (always()) }}
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        env:
+          CACHE_ARCHIVES: ${{ format('archives eligible={0}, hit={1}, prepared={2}, plan reason={3}, prepare reason={4}', steps.dependency-cache-plan.outputs.enabled, steps.dependency-cache-restore.outputs.cache-hit, steps.dependency-cache-prepare.outputs.prepared, steps.dependency-cache-plan.outputs.reason, steps.dependency-cache-prepare.outputs.reason) }}
+          CACHE_COMPILED: ${{ format('compiled eligible={0}, hit={1}, prepared={2}, plan reason={3}, prepare reason={4}, exported={5}, export reason={6}', steps.compiled-cache-plan.outputs.enabled, steps.compiled-cache-restore.outputs.cache-hit, steps.compiled-cache-prepare.outputs.prepared, steps.compiled-cache-plan.outputs.reason, steps.compiled-cache-prepare.outputs.reason, steps.compiled-cache-export.outputs.exported, steps.compiled-cache-export.outputs.reason) }}
+        run: printf '%s\n' '### Dependency cache' "$CACHE_ARCHIVES" "$CACHE_COMPILED" >> "$GITHUB_STEP_SUMMARY"
+
   rust-api:
     permissions:
       contents: read
@@ -789,6 +799,16 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
           path: source/frontend/web/test-results/browser-functional/oauth-*.png
+
+      - name: Summarize dependency cache decisions
+        id: cache_report
+        if: ${{ steps.worker.outcome == 'success' && (always()) }}
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        env:
+          CACHE_ARCHIVES: ${{ format('archives eligible={0}, hit={1}, prepared={2}, plan reason={3}, prepare reason={4}', steps.dependency-cache-plan.outputs.enabled, steps.dependency-cache-restore.outputs.cache-hit, steps.dependency-cache-prepare.outputs.prepared, steps.dependency-cache-plan.outputs.reason, steps.dependency-cache-prepare.outputs.reason) }}
+          CACHE_COMPILED: ${{ format('compiled eligible={0}, hit={1}, prepared={2}, plan reason={3}, prepare reason={4}', steps.compiled-cache-plan.outputs.enabled, steps.compiled-cache-restore.outputs.cache-hit, steps.compiled-cache-prepare.outputs.prepared, steps.compiled-cache-plan.outputs.reason, steps.compiled-cache-prepare.outputs.reason) }}
+        run: printf '%s\n' '### Dependency cache' "$CACHE_ARCHIVES" "$CACHE_COMPILED" >> "$GITHUB_STEP_SUMMARY"
 
   rust:
     permissions:
@@ -1325,6 +1345,15 @@ jobs:
           exit-code: "1"
           timeout: 10m
 
+      - name: Summarize dependency cache decisions
+        id: cache_report
+        if: ${{ steps.worker.outcome == 'success' && (always()) }}
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        env:
+          CACHE_IMAGE: ${{ format('image eligible={0}, hit={1}, prepared={2}, plan reason={3}, prepare reason={4}', steps.image-cache-plan.outputs.enabled, steps.image-cache-restore.outputs.cache-hit, steps.image-cache-prepare.outputs.prepared, steps.image-cache-plan.outputs.reason, steps.image-cache-prepare.outputs.reason) }}
+        run: printf '%s\n' '### Dependency cache' "$CACHE_IMAGE" >> "$GITHUB_STEP_SUMMARY"
+
   image-deps:
     name: Image Dependencies
     needs: [gate]
@@ -1437,17 +1466,26 @@ jobs:
           path: ${{ steps.image-cache-plan.outputs.path }}
           key: ${{ steps.image-cache-plan.outputs.key }}
 
+      - name: Summarize dependency cache decisions
+        id: cache_report
+        if: ${{ steps.worker.outcome == 'success' && (always()) }}
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        env:
+          CACHE_IMAGE: ${{ format('image eligible={0}, hit={1}, plan reason={2}, exported={3}, export reason={4}', steps.image-cache-plan.outputs.enabled, steps.image-cache-restore.outputs.cache-hit, steps.image-cache-plan.outputs.reason, steps.image-cache-export.outputs.exported, steps.image-cache-export.outputs.reason) }}
+        run: printf '%s\n' '### Dependency cache' "$CACHE_IMAGE" >> "$GITHUB_STEP_SUMMARY"
+
   browser-ui:
     permissions:
       contents: read
       actions: read
-    name: Browser UI (${{ matrix.shard }}/2)
+    name: Browser UI (${{ matrix.shard }}/3)
     needs: [gate]
     if: ${{ !cancelled() && needs.gate.result == 'success' && needs.gate.outputs.browser == 'true' }}
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3]
     runs-on: ubuntu-26.04
     defaults:
       run:
@@ -1540,7 +1578,7 @@ jobs:
         id: browser_tests
         env:
           PLAYWRIGHT_JSON_OUTPUT_FILE: ${{ runner.temp }}/browser-ui-test-results.json
-          BROWSER_UI_SHARD: ${{ matrix.shard }}/2
+          BROWSER_UI_SHARD: ${{ matrix.shard }}/3
         shell: private_run.sh {0}
         run: pnpm --dir "${{ hashFiles('source/frontend/pnpm-workspace.yaml') != '' && 'frontend' || '.' }}" --filter web test:e2e --project=desktop-chromium --shard="$BROWSER_UI_SHARD" --reporter=dot,json
 

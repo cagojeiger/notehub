@@ -23,1246 +23,193 @@ env:
 
 jobs:
   gate:
-    name: Validate core request
+    name: Request
     permissions:
       contents: read
       actions: read
-    if: github.repository_id == '1437742487' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-26.04
-    timeout-minutes: 20
-    outputs:
-      tested_sha: ${{ steps.request.outputs.tested_sha }}
-      core_sha: ${{ steps.request.outputs.core_sha }}
-      source_event: ${{ steps.request.outputs.source_event }}
-      rust_build: ${{ steps.request.outputs.rust_build }}
-      rust: ${{ steps.request.outputs.rust }}
-      web: ${{ steps.request.outputs.web }}
-      browser: ${{ steps.request.outputs.browser }}
-      postgres: ${{ steps.request.outputs.postgres }}
-      image: ${{ steps.request.outputs.image }}
-      impact_scope: ${{ steps.request.outputs.impact_scope }}
-      impact_reason: ${{ steps.request.outputs.impact_reason }}
+    uses: ./.github/workflows/request.yml
+    with:
+      request: ${{ inputs.request }}
+      kind: ci
+    secrets:
+      CORE_READ_APP_PRIVATE_KEY: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
 
-    steps:
-      - name: Create scoped core metadata token
-        id: core-token
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
-        with:
-          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
-          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
-          owner: cagojeiger
-          repositories: notehub-core
-          skip-token-revoke: true
-          permission-contents: read
-          permission-actions: read
-          permission-pull-requests: read
-
-      - name: Checkout trusted private CI control
-        id: control
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: cagojeiger/notehub-core
-          ref: main
-          token: ${{ steps.core-token.outputs.token }}
-          path: .control
-          fetch-depth: 1
-          sparse-checkout: .github
-          persist-credentials: false
-
-      - name: Validate immutable core request
-        id: request
-        env:
-          REQUEST_JSON: ${{ inputs.request }}
-          CORE_CONTROL_SHA: ${{ steps.control.outputs.commit }}
-          GH_TOKEN: ${{ github.token }}
-          CORE_TOKEN: ${{ steps.core-token.outputs.token }}
-        run: python3 .control/.github/scripts/ci_bridge.py gate --kind ci >> "$GITHUB_OUTPUT"
-
-      - name: Revoke gate metadata token
-        if: ${{ always() && steps.core-token.outputs.token != '' }}
-        shell: bash
-        working-directory: ${{ github.workspace }}
-        env:
-          CORE_TOKEN: ${{ steps.core-token.outputs.token }}
-          CORE_TOKEN_REVOKE_RECEIPT: ${{ runner.temp }}/notehub-core-metadata-revoked
-        run: bash .control/.github/scripts/checkout_core_revoke.sh
-
-      - name: Ensure core metadata token revoked
-        if: ${{ always() && steps.core-token.outputs.token != '' }}
-        shell: bash
-        working-directory: ${{ github.workspace }}
-        env:
-          CORE_TOKEN: ${{ steps.core-token.outputs.token }}
-        run: |
-          if [ -f "$RUNNER_TEMP/notehub-core-metadata-revoked" ]; then
-            exit 0
-          fi
-          status=$(printf 'header = "Authorization: Bearer %s"\n' "$CORE_TOKEN" | \
-            curl --silent --show-error --connect-timeout 10 --max-time 30 --output /dev/null --write-out '%{http_code}' \
-              --request DELETE --header 'Accept: application/vnd.github+json' \
-              --header 'X-GitHub-Api-Version: 2022-11-28' --config - \
-              https://api.github.com/installation/token)
-          test "$status" = 204
-
-  security:
+  source:
+    name: Source Checks
+    needs: [gate]
     permissions:
       contents: read
       actions: read
-    needs: gate
-    name: Source Security
-    runs-on: ubuntu-26.04
-    timeout-minutes: 20
-    steps:
-      - name: Create scoped core metadata token
-        id: core-token
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
-        with:
-          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
-          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
-          owner: cagojeiger
-          repositories: notehub-core
-          skip-token-revoke: true
-          permission-contents: read
-          permission-actions: read
-          permission-pull-requests: read
-
-      - name: Checkout trusted private CI control
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: cagojeiger/notehub-core
-          ref: ${{ needs.gate.outputs.core_sha }}
-          token: ${{ steps.core-token.outputs.token }}
-          path: .control
-          fetch-depth: 1
-          sparse-checkout: .github
-          persist-credentials: false
-
-      - name: Validate current public CI worker
-        id: worker
-        uses: ./.control/.github/actions/ci-worker-entry
-        with:
-          request: ${{ inputs.request }}
-          kind: ci
-          source-sha: ${{ needs.gate.outputs.tested_sha }}
-          core-token: ${{ steps.core-token.outputs.token }}
-          control-sha: ${{ needs.gate.outputs.core_sha }}
-
-      - name: Ensure core metadata token revoked
-        if: ${{ always() && steps.core-token.outputs.token != '' }}
-        shell: bash
-        working-directory: ${{ github.workspace }}
-        env:
-          CORE_TOKEN: ${{ steps.core-token.outputs.token }}
-        run: |
-          if [ -f "$RUNNER_TEMP/notehub-core-metadata-revoked" ]; then
-            exit 0
-          fi
-          status=$(printf 'header = "Authorization: Bearer %s"\n' "$CORE_TOKEN" | \
-            curl --silent --show-error --connect-timeout 10 --max-time 30 --output /dev/null --write-out '%{http_code}' \
-              --request DELETE --header 'Accept: application/vnd.github+json' \
-              --header 'X-GitHub-Api-Version: 2022-11-28' --config - \
-              https://api.github.com/installation/token)
-          test "$status" = 204
-
-      - name: Checkout public workflow metadata
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: cagojeiger/notehub
-          ref: ${{ github.sha }}
-          token: ${{ github.token }}
-          path: .public-control
-          persist-credentials: false
-
-      - name: Set up pinned local scanners
-        uses: ./.control/.github/actions/setup-security-scanners
-
-      - name: Checkout exact core source
-        uses: ./.control/.github/actions/checkout-core
-        with:
-          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
-          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
-          sha: ${{ needs.gate.outputs.tested_sha }}
-          path: source
-
-      - name: Validate public CI contracts with private control
-        shell: private_run.sh {0}
-        working-directory: ${{ github.workspace }}
-        run: |
-          python3 "$GITHUB_WORKSPACE/.control/.github/scripts/check_public_ci.py" \
-            --public-root "$GITHUB_WORKSPACE/.public-control" \
-            --private-control-root "$GITHUB_WORKSPACE/.control"
-
-      - name: Verify pinned scanner compatibility
-        shell: private_run.sh {0}
-        working-directory: ${{ github.workspace }}
-        run: bash "$GITHUB_WORKSPACE/.control/.github/scripts/ci_scanner_smoke.sh"
-
-      - name: Verify private-output shell behavior
-        shell: private_run.sh {0}
-        working-directory: ${{ github.workspace }}
-        run: bash "$GITHUB_WORKSPACE/.control/.github/scripts/ci_private_shell_smoke.sh"
-
-      - name: Check source security without publishing source diagnostics
-        shell: bash
-        run: source "$GITHUB_WORKSPACE/.control/.github/scripts/ci_source_security.sh"
-
-  hygiene:
-    permissions:
-      contents: read
-      actions: read
-    needs: gate
-    name: Hygiene
-    runs-on: ubuntu-26.04
-    defaults:
-      run:
-        working-directory: source
-    steps:
-      - name: Create scoped core metadata token
-        id: core-token
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
-        with:
-          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
-          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
-          owner: cagojeiger
-          repositories: notehub-core
-          skip-token-revoke: true
-          permission-contents: read
-          permission-actions: read
-          permission-pull-requests: read
-
-      - name: Checkout trusted private CI control
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: cagojeiger/notehub-core
-          ref: ${{ needs.gate.outputs.core_sha }}
-          token: ${{ steps.core-token.outputs.token }}
-          path: .control
-          fetch-depth: 1
-          sparse-checkout: .github
-          persist-credentials: false
-
-      - name: Validate current public CI worker
-        id: worker
-        uses: ./.control/.github/actions/ci-worker-entry
-        with:
-          request: ${{ inputs.request }}
-          kind: ci
-          source-sha: ${{ needs.gate.outputs.tested_sha }}
-          core-token: ${{ steps.core-token.outputs.token }}
-          control-sha: ${{ needs.gate.outputs.core_sha }}
-
-      - name: Ensure core metadata token revoked
-        if: ${{ always() && steps.core-token.outputs.token != '' }}
-        shell: bash
-        working-directory: ${{ github.workspace }}
-        env:
-          CORE_TOKEN: ${{ steps.core-token.outputs.token }}
-        run: |
-          if [ -f "$RUNNER_TEMP/notehub-core-metadata-revoked" ]; then
-            exit 0
-          fi
-          status=$(printf 'header = "Authorization: Bearer %s"\n' "$CORE_TOKEN" | \
-            curl --silent --show-error --connect-timeout 10 --max-time 30 --output /dev/null --write-out '%{http_code}' \
-              --request DELETE --header 'Accept: application/vnd.github+json' \
-              --header 'X-GitHub-Api-Version: 2022-11-28' --config - \
-              https://api.github.com/installation/token)
-          test "$status" = 204
-
-      - name: Checkout exact core source
-        uses: ./.control/.github/actions/checkout-core
-        with:
-          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
-          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
-          sha: ${{ needs.gate.outputs.tested_sha }}
-          path: source
-          fetch-depth: 2
-
-      - name: Select CI checks
-        env:
-          RUST_BUILD: ${{ needs.gate.outputs.rust_build }}
-          RUST: ${{ needs.gate.outputs.rust }}
-          WEB: ${{ needs.gate.outputs.web }}
-          BROWSER: ${{ needs.gate.outputs.browser }}
-          POSTGRES: ${{ needs.gate.outputs.postgres }}
-          IMAGE: ${{ needs.gate.outputs.image }}
-          IMPACT_SCOPE: ${{ needs.gate.outputs.impact_scope }}
-          IMPACT_REASON: ${{ needs.gate.outputs.impact_reason }}
-        shell: private_run.sh {0}
-        run: source "$GITHUB_WORKSPACE/.control/.github/scripts/ci_hygiene_impact.sh"
-
-      - name: Install actionlint
-        env:
-          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
-        shell: private_run.sh {0}
-        run: source "$GITHUB_WORKSPACE/.control/.github/scripts/ci_hygiene_install_actionlint.sh"
-
-      - name: Workflow checks
-        shell: private_run.sh {0}
-        run: source "$GITHUB_WORKSPACE/.control/.github/scripts/ci_hygiene_workflow_check.sh"
-
-      - name: Format
-        shell: private_run.sh {0}
-        run: source "$GITHUB_WORKSPACE/.control/.github/scripts/ci_hygiene_fmt.sh"
-
-      - name: Diff check
-        shell: private_run.sh {0}
-        run: source "$GITHUB_WORKSPACE/.control/.github/scripts/ci_hygiene_diff.sh"
+    uses: ./.github/workflows/source-checks.yml
+    with:
+      request: ${{ inputs.request }}
+      core_sha: ${{ needs.gate.outputs.core_sha }}
+      tested_sha: ${{ needs.gate.outputs.tested_sha }}
+      checks: ${{ toJSON(needs.gate.outputs) }}
+    secrets:
+      CORE_READ_APP_PRIVATE_KEY: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
 
   rust-lint:
     name: Rust Lint
+    needs: [gate]
+    if: needs.gate.outputs.rust == 'true'
     permissions:
       contents: read
       actions: read
-    needs: [gate]
-    uses: cagojeiger/notehub/.github/workflows/rust.yml@main
+    uses: ./.github/workflows/rust.yml
     with:
       core: notehub-core
       task: lint
-      enabled: ${{ needs.gate.outputs.rust == 'true' }}
       request: ${{ inputs.request }}
       core_sha: ${{ needs.gate.outputs.core_sha }}
       tested_sha: ${{ needs.gate.outputs.tested_sha }}
-    secrets: inherit
+    secrets:
+      CORE_READ_APP_PRIVATE_KEY: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
 
   rust-build:
     name: Rust Build
+    needs: [gate]
+    if: needs.gate.outputs.rust == 'true'
     permissions:
       contents: read
       actions: read
-    needs: [gate]
-    uses: cagojeiger/notehub/.github/workflows/rust.yml@main
+    uses: ./.github/workflows/rust.yml
     with:
       core: notehub-core
       task: build
-      enabled: ${{ needs.gate.outputs.rust == 'true' }}
       request: ${{ inputs.request }}
       core_sha: ${{ needs.gate.outputs.core_sha }}
       tested_sha: ${{ needs.gate.outputs.tested_sha }}
-    secrets: inherit
+    secrets:
+      CORE_READ_APP_PRIVATE_KEY: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
 
   rust-api:
     name: Rust API
+    needs: [gate]
+    if: needs.gate.outputs.rust_build == 'true'
     permissions:
       contents: read
       actions: read
-    needs: [gate]
-    uses: cagojeiger/notehub/.github/workflows/rust.yml@main
+    uses: ./.github/workflows/rust.yml
     with:
       core: notehub-core
       task: api
-      enabled: ${{ needs.gate.outputs.rust_build == 'true' }}
       request: ${{ inputs.request }}
       core_sha: ${{ needs.gate.outputs.core_sha }}
       tested_sha: ${{ needs.gate.outputs.tested_sha }}
       browser: ${{ needs.gate.outputs.browser == 'true' }}
-    secrets: inherit
-
-  rust:
-    permissions:
-      contents: read
-      actions: read
-    name: Rust
-    needs: [gate, rust-build, rust-lint]
-    if: ${{ !cancelled() && needs.gate.result == 'success' && needs.gate.outputs.rust == 'true' }}
-    runs-on: ubuntu-26.04
-    timeout-minutes: 10
-    steps:
-      - name: Require successful Rust build
-        working-directory: ${{ github.workspace }}
-        env:
-          BUILD_RESULT: ${{ needs.rust-build.result }}
-          LINT_RESULT: ${{ needs.rust-lint.result }}
-        run: test "$BUILD_RESULT" = success && test "$LINT_RESULT" = success
-
-      - name: Create scoped core metadata token
-        id: core-token
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
-        with:
-          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
-          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
-          owner: cagojeiger
-          repositories: notehub-core
-          skip-token-revoke: true
-          permission-contents: read
-          permission-actions: read
-          permission-pull-requests: read
-
-      - name: Checkout trusted private CI control
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: cagojeiger/notehub-core
-          ref: ${{ needs.gate.outputs.core_sha }}
-          token: ${{ steps.core-token.outputs.token }}
-          path: .control
-          fetch-depth: 1
-          sparse-checkout: .github
-          persist-credentials: false
-
-      - name: Validate current public CI worker
-        id: worker
-        uses: ./.control/.github/actions/ci-worker-entry
-        with:
-          request: ${{ inputs.request }}
-          kind: ci
-          source-sha: ${{ needs.gate.outputs.tested_sha }}
-          core-token: ${{ steps.core-token.outputs.token }}
-          control-sha: ${{ needs.gate.outputs.core_sha }}
-
-      - name: Ensure core metadata token revoked
-        if: ${{ always() && steps.core-token.outputs.token != '' }}
-        shell: bash
-        working-directory: ${{ github.workspace }}
-        env:
-          CORE_TOKEN: ${{ steps.core-token.outputs.token }}
-        run: |
-          if [ -f "$RUNNER_TEMP/notehub-core-metadata-revoked" ]; then
-            exit 0
-          fi
-          status=$(printf 'header = "Authorization: Bearer %s"\n' "$CORE_TOKEN" | \
-            curl --silent --show-error --connect-timeout 10 --max-time 30 --output /dev/null --write-out '%{http_code}' \
-              --request DELETE --header 'Accept: application/vnd.github+json' \
-              --header 'X-GitHub-Api-Version: 2022-11-28' --config - \
-              https://api.github.com/installation/token)
-          test "$status" = 204
+    secrets:
+      CORE_READ_APP_PRIVATE_KEY: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
 
   postgres18:
     name: PostgreSQL 18
+    needs: [gate]
+    if: needs.gate.outputs.postgres == 'true'
     permissions:
       contents: read
       actions: read
-    needs: [gate]
-    uses: cagojeiger/notehub/.github/workflows/rust.yml@main
+    uses: ./.github/workflows/rust.yml
     with:
       core: notehub-core
       task: postgres18
-      enabled: ${{ needs.gate.outputs.postgres == 'true' }}
       request: ${{ inputs.request }}
       core_sha: ${{ needs.gate.outputs.core_sha }}
       tested_sha: ${{ needs.gate.outputs.tested_sha }}
-    secrets: inherit
+    secrets:
+      CORE_READ_APP_PRIVATE_KEY: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
 
   rust-audit:
     name: RustSec Audit
+    needs: [gate]
     permissions:
       contents: read
       actions: read
-    needs: [gate]
-    uses: cagojeiger/notehub/.github/workflows/rust.yml@main
+    uses: ./.github/workflows/rust.yml
     with:
       core: notehub-core
       task: audit
       request: ${{ inputs.request }}
       core_sha: ${{ needs.gate.outputs.core_sha }}
       tested_sha: ${{ needs.gate.outputs.tested_sha }}
-    secrets: inherit
+    secrets:
+      CORE_READ_APP_PRIVATE_KEY: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
 
   web:
-    permissions:
-      contents: read
-      actions: read
     name: Web
     needs: [gate]
     if: needs.gate.outputs.web == 'true'
-    runs-on: ubuntu-26.04
-    defaults:
-      run:
-        working-directory: source
-
-    steps:
-      - name: Create scoped core metadata token
-        id: core-token
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
-        with:
-          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
-          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
-          owner: cagojeiger
-          repositories: notehub-core
-          skip-token-revoke: true
-          permission-contents: read
-          permission-actions: read
-          permission-pull-requests: read
-
-      - name: Checkout trusted private CI control
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: cagojeiger/notehub-core
-          ref: ${{ needs.gate.outputs.core_sha }}
-          token: ${{ steps.core-token.outputs.token }}
-          path: .control
-          fetch-depth: 1
-          sparse-checkout: .github
-          persist-credentials: false
-
-      - name: Validate current public CI worker
-        id: worker
-        uses: ./.control/.github/actions/ci-worker-entry
-        with:
-          request: ${{ inputs.request }}
-          kind: ci
-          source-sha: ${{ needs.gate.outputs.tested_sha }}
-          core-token: ${{ steps.core-token.outputs.token }}
-          control-sha: ${{ needs.gate.outputs.core_sha }}
-
-      - name: Ensure core metadata token revoked
-        if: ${{ always() && steps.core-token.outputs.token != '' }}
-        shell: bash
-        working-directory: ${{ github.workspace }}
-        env:
-          CORE_TOKEN: ${{ steps.core-token.outputs.token }}
-        run: |
-          if [ -f "$RUNNER_TEMP/notehub-core-metadata-revoked" ]; then
-            exit 0
-          fi
-          status=$(printf 'header = "Authorization: Bearer %s"\n' "$CORE_TOKEN" | \
-            curl --silent --show-error --connect-timeout 10 --max-time 30 --output /dev/null --write-out '%{http_code}' \
-              --request DELETE --header 'Accept: application/vnd.github+json' \
-              --header 'X-GitHub-Api-Version: 2022-11-28' --config - \
-              https://api.github.com/installation/token)
-          test "$status" = 204
-
-      - name: Checkout exact core source
-        uses: ./.control/.github/actions/checkout-core
-        with:
-          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
-          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
-          sha: ${{ needs.gate.outputs.tested_sha }}
-          path: source
-          fetch-depth: 1
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        with:
-          package_json_file: ${{ hashFiles('source/frontend/package.json') != '' && 'source/frontend/package.json' || 'source/package.json' }}
-
-      - name: Set up Node
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: ${{ hashFiles('source/frontend/.node-version') != '' && 'source/frontend/.node-version' || 'source/.node-version' }}
-          package-manager-cache: false
-
-      - name: Install dependencies
-        shell: private_run.sh {0}
-        run: pnpm --dir "${{ hashFiles('source/frontend/pnpm-workspace.yaml') != '' && 'frontend' || '.' }}" install --frozen-lockfile
-
-      - name: Audit dependencies
-        shell: private_run.sh {0}
-        run: pnpm --dir "${{ hashFiles('source/frontend/pnpm-workspace.yaml') != '' && 'frontend' || '.' }}" audit --audit-level moderate
-
-      - name: Check theme contrast
-        shell: private_run.sh {0}
-        run: pnpm --dir "${{ hashFiles('source/frontend/pnpm-workspace.yaml') != '' && 'frontend' || '.' }}" --filter web check:contrast
-
-      - name: Typecheck
-        shell: private_run.sh {0}
-        run: pnpm --dir "${{ hashFiles('source/frontend/pnpm-workspace.yaml') != '' && 'frontend' || '.' }}" --filter web typecheck
-
-      - name: Lint
-        shell: private_run.sh {0}
-        run: pnpm --dir "${{ hashFiles('source/frontend/pnpm-workspace.yaml') != '' && 'frontend' || '.' }}" --filter web lint
-
-      - name: Test
-        shell: private_run.sh {0}
-        run: pnpm --dir "${{ hashFiles('source/frontend/pnpm-workspace.yaml') != '' && 'frontend' || '.' }}" --filter web test
-
-      - name: Build
-        shell: private_run.sh {0}
-        run: pnpm --dir "${{ hashFiles('source/frontend/pnpm-workspace.yaml') != '' && 'frontend' || '.' }}" --filter web build
-
-      - name: Check production bundle budgets
-        shell: private_run.sh {0}
-        run: pnpm --dir "${{ hashFiles('source/frontend/pnpm-workspace.yaml') != '' && 'frontend' || '.' }}" --filter web check:preview-bundle
-
-      - name: Retain production frontend
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: web-dist
-          path: source/frontend/web/dist/
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 7
-
-  image-pr:
-    name: PR Image Gate
-    needs: [gate]
-    if: needs.gate.outputs.source_event == 'pull_request' && needs.gate.outputs.image == 'true'
-    runs-on: ubuntu-26.04
-    defaults:
-      run:
-        working-directory: source
-    timeout-minutes: 45
     permissions:
-      actions: read
       contents: read
-    steps:
-      - name: Create scoped core metadata token
-        id: core-token
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
-        with:
-          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
-          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
-          owner: cagojeiger
-          repositories: notehub-core
-          skip-token-revoke: true
-          permission-contents: read
-          permission-actions: read
-          permission-pull-requests: read
+      actions: read
+    uses: ./.github/workflows/web.yml
+    with:
+      request: ${{ inputs.request }}
+      core_sha: ${{ needs.gate.outputs.core_sha }}
+      tested_sha: ${{ needs.gate.outputs.tested_sha }}
+    secrets:
+      CORE_READ_APP_PRIVATE_KEY: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
 
-      - name: Checkout trusted private CI control
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: cagojeiger/notehub-core
-          ref: ${{ needs.gate.outputs.core_sha }}
-          token: ${{ steps.core-token.outputs.token }}
-          path: .control
-          fetch-depth: 1
-          sparse-checkout: .github
-          persist-credentials: false
-
-      - name: Validate current public CI worker
-        id: worker
-        uses: ./.control/.github/actions/ci-worker-entry
-        with:
-          request: ${{ inputs.request }}
-          kind: ci
-          source-sha: ${{ needs.gate.outputs.tested_sha }}
-          core-token: ${{ steps.core-token.outputs.token }}
-          control-sha: ${{ needs.gate.outputs.core_sha }}
-
-      - name: Ensure core metadata token revoked
-        if: ${{ always() && steps.core-token.outputs.token != '' }}
-        shell: bash
-        working-directory: ${{ github.workspace }}
-        env:
-          CORE_TOKEN: ${{ steps.core-token.outputs.token }}
-        run: |
-          if [ -f "$RUNNER_TEMP/notehub-core-metadata-revoked" ]; then
-            exit 0
-          fi
-          status=$(printf 'header = "Authorization: Bearer %s"\n' "$CORE_TOKEN" | \
-            curl --silent --show-error --connect-timeout 10 --max-time 30 --output /dev/null --write-out '%{http_code}' \
-              --request DELETE --header 'Accept: application/vnd.github+json' \
-              --header 'X-GitHub-Api-Version: 2022-11-28' --config - \
-              https://api.github.com/installation/token)
-          test "$status" = 204
-
-      - name: Checkout exact core source
-        uses: ./.control/.github/actions/checkout-core
-        with:
-          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
-          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
-          sha: ${{ needs.gate.outputs.tested_sha }}
-          path: source
-          fetch-depth: 1
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-        with:
-          cache-binary: false
-
-      - name: Plan image dependency cache
-        id: image-cache-plan
-        shell: private_run.sh {0}
-        run: python3 "$GITHUB_WORKSPACE/.control/.github/scripts/ci_dependency_cache.py" plan --kind cargo-target-image
-
-      - name: Restore image dependencies
-        id: image-cache-restore
-        if: steps.image-cache-plan.outputs.enabled == 'true'
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ${{ steps.image-cache-plan.outputs.path }}
-          key: ${{ steps.image-cache-plan.outputs.key }}
-
-      - name: Prepare verified image dependencies
-        id: image-cache-prepare
-        if: steps.image-cache-plan.outputs.enabled == 'true' && steps.image-cache-restore.outputs.cache-hit == 'true'
-        shell: private_run.sh {0}
-        run: python3 "$GITHUB_WORKSPACE/.control/.github/scripts/ci_dependency_cache.py" prepare --kind cargo-target-image
-
-      - name: Build PR image locally
-        env:
-          SOURCE_SHA: ${{ needs.gate.outputs.tested_sha }}
-        shell: private_run.sh {0}
-        run: bash "$GITHUB_WORKSPACE/.control/.github/scripts/ci_pr_image_build.sh"
-
-      - name: Install verified Trivy release
-        shell: private_run.sh {0}
-        run: |
-          trivy_dir="$RUNNER_TEMP/trivy-release"
-          mkdir -p "$trivy_dir"
-          curl --fail --location --retry 3 --retry-all-errors --connect-timeout 15 --max-time 120 \
-            --output "$trivy_dir/trivy.tar.gz" \
-            https://github.com/aquasecurity/trivy/releases/download/v0.74.0/trivy_0.74.0_Linux-64bit.tar.gz
-          echo "2ae6fe3ee734b7fdf11335663e18c75ea12dccc76062f09f164a3b0f8be4371a  $trivy_dir/trivy.tar.gz" | sha256sum --check --strict
-          tar -xzf "$trivy_dir/trivy.tar.gz" -C "$trivy_dir" trivy
-          "$trivy_dir/trivy" --version
-          echo "$trivy_dir" >> "$GITHUB_PATH"
-
-      - name: Report high and critical vulnerabilities
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        env:
-          TRIVY_IMAGE_SRC: docker
-        with:
-          version: v0.74.0
-          skip-setup-trivy: true
-          cache: false
-          image-ref: notegate-pr:${{ needs.gate.outputs.tested_sha }}
-          scanners: vuln
-          severity: HIGH,CRITICAL
-          format: json
-          output: source/trivy.json
-          ignore-unfixed: false
-          exit-code: "0"
-          timeout: 10m
-
-      - name: Summarize image findings
-        shell: private_run.sh {0}
-        run: bash "$GITHUB_WORKSPACE/.control/.github/scripts/ci_pr_image_summary.sh"
-
-      - name: Retain scan report
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: pr-image-trivy
-          path: source/trivy.json
-          if-no-files-found: error
-          retention-days: 30
-
-      - name: Block fixable critical vulnerabilities
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        env:
-          TRIVY_IMAGE_SRC: docker
-        with:
-          version: v0.74.0
-          skip-setup-trivy: true
-          cache: false
-          image-ref: notegate-pr:${{ needs.gate.outputs.tested_sha }}
-          scanners: vuln
-          severity: CRITICAL
-          format: table
-          ignore-unfixed: true
-          exit-code: "1"
-          timeout: 10m
-
-      - name: Summarize dependency cache decisions
-        id: cache_report
-        if: ${{ steps.worker.outcome == 'success' && (always()) }}
-        shell: bash
-        working-directory: ${{ github.workspace }}
-        env:
-          CACHE_IMAGE: ${{ format('image eligible={0}, hit={1}, prepared={2}, plan reason={3}, prepare reason={4}', steps.image-cache-plan.outputs.enabled, steps.image-cache-restore.outputs.cache-hit, steps.image-cache-prepare.outputs.prepared, steps.image-cache-plan.outputs.reason, steps.image-cache-prepare.outputs.reason) }}
-        run: printf '%s\n' '### Dependency cache' "$CACHE_IMAGE" >> "$GITHUB_STEP_SUMMARY"
-
-  image-deps:
-    name: Image Dependencies
+  image:
+    name: Image
     needs: [gate]
-    if: needs.gate.outputs.source_event == 'push' && needs.gate.outputs.image == 'true'
-    runs-on: ubuntu-26.04
-    defaults:
-      run:
-        working-directory: source
-    timeout-minutes: 45
+    if: needs.gate.outputs.image == 'true'
     permissions:
-      actions: read
       contents: read
-    steps:
-      - name: Create scoped core metadata token
-        id: core-token
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
-        with:
-          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
-          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
-          owner: cagojeiger
-          repositories: notehub-core
-          skip-token-revoke: true
-          permission-contents: read
-          permission-actions: read
-          permission-pull-requests: read
-
-      - name: Checkout trusted private CI control
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: cagojeiger/notehub-core
-          ref: ${{ needs.gate.outputs.core_sha }}
-          token: ${{ steps.core-token.outputs.token }}
-          path: .control
-          fetch-depth: 1
-          sparse-checkout: .github
-          persist-credentials: false
-
-      - name: Validate current public CI worker
-        id: worker
-        uses: ./.control/.github/actions/ci-worker-entry
-        with:
-          request: ${{ inputs.request }}
-          kind: ci
-          source-sha: ${{ needs.gate.outputs.tested_sha }}
-          core-token: ${{ steps.core-token.outputs.token }}
-          control-sha: ${{ needs.gate.outputs.core_sha }}
-
-      - name: Ensure core metadata token revoked
-        if: ${{ always() && steps.core-token.outputs.token != '' }}
-        shell: bash
-        working-directory: ${{ github.workspace }}
-        env:
-          CORE_TOKEN: ${{ steps.core-token.outputs.token }}
-        run: |
-          if [ -f "$RUNNER_TEMP/notehub-core-metadata-revoked" ]; then
-            exit 0
-          fi
-          status=$(printf 'header = "Authorization: Bearer %s"\n' "$CORE_TOKEN" | \
-            curl --silent --show-error --connect-timeout 10 --max-time 30 --output /dev/null --write-out '%{http_code}' \
-              --request DELETE --header 'Accept: application/vnd.github+json' \
-              --header 'X-GitHub-Api-Version: 2022-11-28' --config - \
-              https://api.github.com/installation/token)
-          test "$status" = 204
-
-      - name: Checkout exact core source
-        uses: ./.control/.github/actions/checkout-core
-        with:
-          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
-          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
-          sha: ${{ needs.gate.outputs.tested_sha }}
-          path: source
-          fetch-depth: 1
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-        with:
-          cache-binary: false
-
-      - name: Plan image dependency cache
-        id: image-cache-plan
-        shell: private_run.sh {0}
-        run: python3 "$GITHUB_WORKSPACE/.control/.github/scripts/ci_dependency_cache.py" plan --kind cargo-target-image
-
-      - name: Check image dependency cache
-        id: image-cache-restore
-        if: steps.image-cache-plan.outputs.enabled == 'true'
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ${{ steps.image-cache-plan.outputs.path }}
-          key: ${{ steps.image-cache-plan.outputs.key }}
-          lookup-only: true
-
-      - name: Build image dependencies from core main
-        id: image-cache-build
-        if: ${{ needs.gate.outputs.source_event == 'push' && steps.image-cache-plan.outputs.enabled == 'true' && steps.image-cache-restore.outputs.cache-hit != 'true' }}
-        shell: private_run.sh {0}
-        run: bash "$GITHUB_WORKSPACE/.control/.github/scripts/ci_image_deps_build.sh"
-
-      - name: Export image dependencies from core main
-        id: image-cache-export
-        if: ${{ needs.gate.outputs.source_event == 'push' && steps.image-cache-plan.outputs.enabled == 'true' && steps.image-cache-restore.outputs.cache-hit != 'true' }}
-        shell: private_run.sh {0}
-        run: python3 "$GITHUB_WORKSPACE/.control/.github/scripts/ci_dependency_cache.py" export --kind cargo-target-image
-
-      - name: Save image dependencies from core main
-        id: image-cache-save
-        if: ${{ needs.gate.outputs.source_event == 'push' && steps.image-cache-plan.outputs.enabled == 'true' && steps.image-cache-restore.outputs.cache-hit != 'true' && steps.image-cache-export.outputs.exported == 'true' }}
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ${{ steps.image-cache-plan.outputs.path }}
-          key: ${{ steps.image-cache-plan.outputs.key }}
-
-      - name: Summarize dependency cache decisions
-        id: cache_report
-        if: ${{ steps.worker.outcome == 'success' && (always()) }}
-        shell: bash
-        working-directory: ${{ github.workspace }}
-        env:
-          CACHE_IMAGE: ${{ format('image eligible={0}, hit={1}, plan reason={2}, exported={3}, export reason={4}', steps.image-cache-plan.outputs.enabled, steps.image-cache-restore.outputs.cache-hit, steps.image-cache-plan.outputs.reason, steps.image-cache-export.outputs.exported, steps.image-cache-export.outputs.reason) }}
-        run: printf '%s\n' '### Dependency cache' "$CACHE_IMAGE" >> "$GITHUB_STEP_SUMMARY"
+      actions: read
+    uses: ./.github/workflows/image.yml
+    with:
+      request: ${{ inputs.request }}
+      core_sha: ${{ needs.gate.outputs.core_sha }}
+      tested_sha: ${{ needs.gate.outputs.tested_sha }}
+    secrets:
+      CORE_READ_APP_PRIVATE_KEY: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
 
   browser-ui:
-    permissions:
-      contents: read
-      actions: read
-    name: Browser UI (${{ matrix.shard }}/3)
+    name: Browser UI
     needs: [gate]
-    if: ${{ !cancelled() && needs.gate.result == 'success' && needs.gate.outputs.browser == 'true' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3]
-    runs-on: ubuntu-26.04
-    defaults:
-      run:
-        working-directory: source
-    steps:
-      - name: Create scoped core metadata token
-        id: core-token
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
-        with:
-          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
-          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
-          owner: cagojeiger
-          repositories: notehub-core
-          skip-token-revoke: true
-          permission-contents: read
-          permission-actions: read
-          permission-pull-requests: read
-
-      - name: Checkout trusted private CI control
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: cagojeiger/notehub-core
-          ref: ${{ needs.gate.outputs.core_sha }}
-          token: ${{ steps.core-token.outputs.token }}
-          path: .control
-          fetch-depth: 1
-          sparse-checkout: .github
-          persist-credentials: false
-
-      - name: Validate current public CI worker
-        id: worker
-        uses: ./.control/.github/actions/ci-worker-entry
-        with:
-          request: ${{ inputs.request }}
-          kind: ci
-          source-sha: ${{ needs.gate.outputs.tested_sha }}
-          core-token: ${{ steps.core-token.outputs.token }}
-          control-sha: ${{ needs.gate.outputs.core_sha }}
-
-      - name: Ensure core metadata token revoked
-        if: ${{ always() && steps.core-token.outputs.token != '' }}
-        shell: bash
-        working-directory: ${{ github.workspace }}
-        env:
-          CORE_TOKEN: ${{ steps.core-token.outputs.token }}
-        run: |
-          if [ -f "$RUNNER_TEMP/notehub-core-metadata-revoked" ]; then
-            exit 0
-          fi
-          status=$(printf 'header = "Authorization: Bearer %s"\n' "$CORE_TOKEN" | \
-            curl --silent --show-error --connect-timeout 10 --max-time 30 --output /dev/null --write-out '%{http_code}' \
-              --request DELETE --header 'Accept: application/vnd.github+json' \
-              --header 'X-GitHub-Api-Version: 2022-11-28' --config - \
-              https://api.github.com/installation/token)
-          test "$status" = 204
-
-      - name: Checkout exact core source
-        uses: ./.control/.github/actions/checkout-core
-        with:
-          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
-          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
-          sha: ${{ needs.gate.outputs.tested_sha }}
-          path: source
-          fetch-depth: 1
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        with:
-          package_json_file: ${{ hashFiles('source/frontend/package.json') != '' && 'source/frontend/package.json' || 'source/package.json' }}
-
-      - name: Set up Node
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: ${{ hashFiles('source/frontend/.node-version') != '' && 'source/frontend/.node-version' || 'source/.node-version' }}
-          package-manager-cache: false
-
-      - name: Install dependencies
-        shell: private_run.sh {0}
-        run: pnpm --dir "${{ hashFiles('source/frontend/pnpm-workspace.yaml') != '' && 'frontend' || '.' }}" install --frozen-lockfile
-
-      - name: Install Chromium
-        shell: private_run.sh {0}
-        run: pnpm --dir "${{ hashFiles('source/frontend/pnpm-workspace.yaml') != '' && 'frontend' || '.' }}" --filter web exec playwright install --with-deps chromium
-
-      - name: Start frontend without API or external services
-        shell: private_run.sh {0}
-        run: source "$GITHUB_WORKSPACE/.control/.github/scripts/ci_browser_ui_start.sh"
-
-      - name: Test browser UI without external services
-        id: browser_tests
-        env:
-          PLAYWRIGHT_JSON_OUTPUT_FILE: ${{ runner.temp }}/browser-ui-test-results.json
-          BROWSER_UI_SHARD: ${{ matrix.shard }}/3
-        shell: private_run.sh {0}
-        run: pnpm --dir "${{ hashFiles('source/frontend/pnpm-workspace.yaml') != '' && 'frontend' || '.' }}" --filter web test:e2e --project=desktop-chromium --shard="$BROWSER_UI_SHARD" --reporter=dot,json
-
-      - name: Collect browser UI test timings
-        id: browser_timings
-        if: ${{ steps.worker.outcome == 'success' && (!cancelled() && (steps.browser_tests.outcome == 'success' || steps.browser_tests.outcome == 'failure')) }}
-        shell: private_run.sh {0}
-        run: source "$GITHUB_WORKSPACE/.control/.github/scripts/ci_browser_ui_timings.sh"
-
-      - name: Retain browser UI test timings
-        if: ${{ steps.worker.outcome == 'success' && (!cancelled() && steps.browser_timings.outcome == 'success') }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: browser-ui-test-timings-${{ matrix.shard }}
-          path: source/browser-e2e/browser-test-timings.json
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Upload login UI screenshots
-        if: ${{ steps.worker.outcome == 'success' && (always()) }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: login-ui-${{ matrix.shard }}
-          if-no-files-found: ignore
-          retention-days: 7
-          path: source/frontend/web/test-results/login-*.png
-
-      - name: Upload authentication UI screenshots
-        if: ${{ steps.worker.outcome == 'success' && (always()) }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: authentication-ui-${{ matrix.shard }}
-          if-no-files-found: ignore
-          retention-days: 7
-          path: source/frontend/web/test-results/settings-auth-*.png
-
-      - name: Upload revision UI screenshots
-        if: ${{ steps.worker.outcome == 'success' && (always()) }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: text-revisions-ui-${{ matrix.shard }}
-          if-no-files-found: ignore
-          retention-days: 7
-          path: source/frontend/web/test-results/text-revisions-*.png
-
-      - name: Upload trash UI screenshots
-        if: ${{ steps.worker.outcome == 'success' && (always()) }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: trash-ui-${{ matrix.shard }}
-          if-no-files-found: ignore
-          retention-days: 7
-          path: source/frontend/web/test-results/trash-*.png
-
-      - name: Upload history and action dialog UI screenshots
-        if: ${{ steps.worker.outcome == 'success' && (always()) }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: invocation-history-ui-${{ matrix.shard }}
-          if-no-files-found: ignore
-          retention-days: 7
-          path: |
-            source/frontend/web/test-results/invocation-history-*.png
-            source/frontend/web/test-results/dialog-*.png
-
-  browser-api:
+    if: needs.gate.outputs.browser == 'true'
     permissions:
       contents: read
       actions: read
-    name: Browser API
-    needs: [gate, rust-api, web]
-    if: ${{ !cancelled() && needs.gate.result == 'success' && needs.gate.outputs.browser == 'true' }}
-    runs-on: ubuntu-26.04
-    timeout-minutes: 10
-    steps:
-      - name: Require successful browser inputs
-        working-directory: ${{ github.workspace }}
-        env:
-          RUST_API_RESULT: ${{ needs.rust-api.result }}
-          WEB_RESULT: ${{ needs.web.result }}
-        run: test "$RUST_API_RESULT" = success && test "$WEB_RESULT" = success
-
-      - name: Create scoped core metadata token
-        id: core-token
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
-        with:
-          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
-          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
-          owner: cagojeiger
-          repositories: notehub-core
-          skip-token-revoke: true
-          permission-contents: read
-          permission-actions: read
-          permission-pull-requests: read
-
-      - name: Checkout trusted private CI control
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: cagojeiger/notehub-core
-          ref: ${{ needs.gate.outputs.core_sha }}
-          token: ${{ steps.core-token.outputs.token }}
-          path: .control
-          fetch-depth: 1
-          sparse-checkout: .github
-          persist-credentials: false
-
-      - name: Validate current public CI worker
-        id: worker
-        uses: ./.control/.github/actions/ci-worker-entry
-        with:
-          request: ${{ inputs.request }}
-          kind: ci
-          source-sha: ${{ needs.gate.outputs.tested_sha }}
-          core-token: ${{ steps.core-token.outputs.token }}
-          control-sha: ${{ needs.gate.outputs.core_sha }}
-
-      - name: Ensure core metadata token revoked
-        if: ${{ always() && steps.core-token.outputs.token != '' }}
-        shell: bash
-        working-directory: ${{ github.workspace }}
-        env:
-          CORE_TOKEN: ${{ steps.core-token.outputs.token }}
-        run: |
-          if [ -f "$RUNNER_TEMP/notehub-core-metadata-revoked" ]; then
-            exit 0
-          fi
-          status=$(printf 'header = "Authorization: Bearer %s"\n' "$CORE_TOKEN" | \
-            curl --silent --show-error --connect-timeout 10 --max-time 30 --output /dev/null --write-out '%{http_code}' \
-              --request DELETE --header 'Accept: application/vnd.github+json' \
-              --header 'X-GitHub-Api-Version: 2022-11-28' --config - \
-              https://api.github.com/installation/token)
-          test "$status" = 204
-
-  browser:
-    permissions:
-      contents: read
-      actions: read
-    name: Browser E2E
-    needs: [gate, browser-ui, rust-api, web]
-    # A skipped required check can satisfy branch protection; inspect cancelled suites too.
-    if: ${{ always() && needs.gate.result == 'success' && needs.gate.outputs.browser == 'true' }}
-    runs-on: ubuntu-26.04
-    steps:
-      - name: Create scoped core metadata token
-        id: core-token
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
-        with:
-          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
-          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
-          owner: cagojeiger
-          repositories: notehub-core
-          skip-token-revoke: true
-          permission-contents: read
-          permission-actions: read
-          permission-pull-requests: read
-
-      - name: Checkout trusted private CI control
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: cagojeiger/notehub-core
-          ref: ${{ needs.gate.outputs.core_sha }}
-          token: ${{ steps.core-token.outputs.token }}
-          path: .control
-          fetch-depth: 1
-          sparse-checkout: .github
-          persist-credentials: false
-
-      - name: Validate current public CI worker
-        id: worker
-        uses: ./.control/.github/actions/ci-worker-entry
-        with:
-          request: ${{ inputs.request }}
-          kind: ci
-          source-sha: ${{ needs.gate.outputs.tested_sha }}
-          core-token: ${{ steps.core-token.outputs.token }}
-          control-sha: ${{ needs.gate.outputs.core_sha }}
-
-      - name: Ensure core metadata token revoked
-        if: ${{ always() && steps.core-token.outputs.token != '' }}
-        shell: bash
-        working-directory: ${{ github.workspace }}
-        env:
-          CORE_TOKEN: ${{ steps.core-token.outputs.token }}
-        run: |
-          if [ -f "$RUNNER_TEMP/notehub-core-metadata-revoked" ]; then
-            exit 0
-          fi
-          status=$(printf 'header = "Authorization: Bearer %s"\n' "$CORE_TOKEN" | \
-            curl --silent --show-error --connect-timeout 10 --max-time 30 --output /dev/null --write-out '%{http_code}' \
-              --request DELETE --header 'Accept: application/vnd.github+json' \
-              --header 'X-GitHub-Api-Version: 2022-11-28' --config - \
-              https://api.github.com/installation/token)
-          test "$status" = 204
-
-      - name: Require both browser suites to pass
-        env:
-          UI_RESULT: ${{ needs.browser-ui.result }}
-          API_RESULT: ${{ needs.rust-api.result }}
-          WEB_RESULT: ${{ needs.web.result }}
-        run: test "$UI_RESULT" = success && test "$API_RESULT" = success && test "$WEB_RESULT" = success
+    uses: ./.github/workflows/browser.yml
+    with:
+      request: ${{ inputs.request }}
+      core_sha: ${{ needs.gate.outputs.core_sha }}
+      tested_sha: ${{ needs.gate.outputs.tested_sha }}
+    secrets:
+      CORE_READ_APP_PRIVATE_KEY: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
 
   npm-audit:
+    name: Npm Audit
+    needs: [gate]
     permissions:
       contents: read
       actions: read
-    needs: gate
-    name: Npm Audit
+    uses: ./.github/workflows/npm-audit.yml
+    with:
+      request: ${{ inputs.request }}
+      core_sha: ${{ needs.gate.outputs.core_sha }}
+      tested_sha: ${{ needs.gate.outputs.tested_sha }}
+    secrets:
+      CORE_READ_APP_PRIVATE_KEY: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
+
+  result:
+    name: Result
+    if: always()
+    needs: [gate, source, rust-lint, rust-build, rust-api, postgres18, rust-audit, web, image, browser-ui, npm-audit]
     runs-on: ubuntu-26.04
-    defaults:
-      run:
-        working-directory: source
+    timeout-minutes: 5
+    permissions:
+      contents: read
     steps:
-      - name: Create scoped core metadata token
-        id: core-token
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
+      - name: Checkout public result contract
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
-          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
-          owner: cagojeiger
-          repositories: notehub-core
-          skip-token-revoke: true
-          permission-contents: read
-          permission-actions: read
-          permission-pull-requests: read
-
-      - name: Checkout trusted private CI control
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: cagojeiger/notehub-core
-          ref: ${{ needs.gate.outputs.core_sha }}
-          token: ${{ steps.core-token.outputs.token }}
-          path: .control
-          fetch-depth: 1
-          sparse-checkout: .github
+          ref: ${{ github.sha }}
           persist-credentials: false
-
-      - name: Validate current public CI worker
-        id: worker
-        uses: ./.control/.github/actions/ci-worker-entry
-        with:
-          request: ${{ inputs.request }}
-          kind: ci
-          source-sha: ${{ needs.gate.outputs.tested_sha }}
-          core-token: ${{ steps.core-token.outputs.token }}
-          control-sha: ${{ needs.gate.outputs.core_sha }}
-
-      - name: Ensure core metadata token revoked
-        if: ${{ always() && steps.core-token.outputs.token != '' }}
-        shell: bash
-        working-directory: ${{ github.workspace }}
+          sparse-checkout: .github
+      - name: Require all selected checks to complete
         env:
-          CORE_TOKEN: ${{ steps.core-token.outputs.token }}
-        run: |
-          if [ -f "$RUNNER_TEMP/notehub-core-metadata-revoked" ]; then
-            exit 0
-          fi
-          status=$(printf 'header = "Authorization: Bearer %s"\n' "$CORE_TOKEN" | \
-            curl --silent --show-error --connect-timeout 10 --max-time 30 --output /dev/null --write-out '%{http_code}' \
-              --request DELETE --header 'Accept: application/vnd.github+json' \
-              --header 'X-GitHub-Api-Version: 2022-11-28' --config - \
-              https://api.github.com/installation/token)
-          test "$status" = 204
-
-      - name: Checkout exact core source
-        uses: ./.control/.github/actions/checkout-core
-        with:
-          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
-          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
-          sha: ${{ needs.gate.outputs.tested_sha }}
-          path: source
-          fetch-depth: 1
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        with:
-          package_json_file: ${{ hashFiles('source/frontend/package.json') != '' && 'source/frontend/package.json' || 'source/package.json' }}
-
-      - name: Set up Node
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: ${{ hashFiles('source/frontend/.node-version') != '' && 'source/frontend/.node-version' || 'source/.node-version' }}
-          package-manager-cache: false
-
-      - name: Install dependencies without lifecycle scripts
-        shell: private_run.sh {0}
-        run: pnpm --dir "${{ hashFiles('source/frontend/pnpm-workspace.yaml') != '' && 'frontend' || '.' }}" install --frozen-lockfile --ignore-scripts
-
-      - name: Audit all npm dependencies
-        shell: private_run.sh {0}
-        run: pnpm --dir "${{ hashFiles('source/frontend/pnpm-workspace.yaml') != '' && 'frontend' || '.' }}" audit --audit-level moderate
+          CI_KIND: ci
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: python3 -I -B .github/scripts/check_ci_result.py

@@ -1,0 +1,66 @@
+name: "[security][core-request][gh-linux] Image"
+run-name: Core private-image ${{ fromJSON(inputs.request).request.run_id }}.${{ fromJSON(inputs.request).request.attempt }} ${{ fromJSON(inputs.request).request.tested_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      request:
+        description: Validated core workflow run and immutable source request
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-private-image-${{ fromJSON(inputs.request).request.event == 'pull_request' && format('pr-{0}', fromJSON(inputs.request).request.pr_number) || format('run-{0}', fromJSON(inputs.request).request.run_id) }}
+  cancel-in-progress: ${{ fromJSON(inputs.request).request.event == 'pull_request' }}
+
+jobs:
+  gate:
+    name: Request
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/request.yml
+    with:
+      request: ${{ inputs.request }}
+      kind: private-image
+    secrets:
+      CORE_READ_APP_PRIVATE_KEY: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
+
+  scan:
+    name: Private Image
+    needs: [gate]
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/private-scan.yml
+    with:
+      request: ${{ inputs.request }}
+      core_sha: ${{ needs.gate.outputs.core_sha }}
+      tested_sha: ${{ needs.gate.outputs.tested_sha }}
+    secrets:
+      CORE_READ_APP_PRIVATE_KEY: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+
+  result:
+    name: Result
+    if: always()
+    needs: [gate, scan]
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout public result contract
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          sparse-checkout: .github
+      - name: Require all selected checks to complete
+        env:
+          CI_KIND: private-image
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: python3 -I -B .github/scripts/check_ci_result.py

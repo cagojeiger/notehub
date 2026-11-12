@@ -8,7 +8,12 @@ from urllib.request import Request, urlopen
 image = os.environ["REGISTRY_IMAGE"]
 if image not in {"project-jelly/cloud", "cagojeiger/notehub"}:
     raise SystemExit("Unexpected private image")
-credentials = base64.b64encode(f'{os.environ["GITHUB_ACTOR"]}:{os.environ["GH_TOKEN"]}'.encode()).decode()
+expected_access = os.environ.get("EXPECT_REGISTRY_ACCESS") == "true"
+actor = "cagojeiger" if expected_access else os.environ["GITHUB_ACTOR"]
+credential = os.environ.get("REGISTRY_TOKEN") if expected_access else os.environ.get("GH_TOKEN")
+if not credential:
+    raise SystemExit("Missing registry verification credential")
+credentials = base64.b64encode(f"{actor}:{credential}".encode()).decode()
 request = Request(f"https://ghcr.io/token?service=ghcr.io&scope=repository:{image}:pull",
                   headers={"Authorization": "Basic " + credentials})
 try:
@@ -24,7 +29,11 @@ except HTTPError as error:
     error.close()
     if status not in {401, 403}:
         raise SystemExit(f"Private registry boundary could not be verified: HTTP {status}") from None
+    if expected_access:
+        raise SystemExit("Protected registry token could not read the private image.") from None
     print("Public Actions token cannot read the private image.")
 else:
-    raise SystemExit("Public repository still has private image access; remove its package Actions grant.")
+    if not expected_access:
+        raise SystemExit("Public repository still has private image access; remove its package Actions grant.")
+    print("Protected main environment can read the private image.")
 

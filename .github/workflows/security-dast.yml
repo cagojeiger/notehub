@@ -123,10 +123,6 @@ jobs:
       NOTEGATE_PUBLIC_URL: http://127.0.0.1:9191
       NOTEGATE_BIND_ADDR: 0.0.0.0:9191
       NOTEGATE_CLI_OAUTH_CLIENT_ID: notegate-cli-local
-      NOTEGATE_ENC_ROOT_KEY_ID: e2e-enc
-      NOTEGATE_ENC_ROOT_SECRET: e2e-distinct-enc-root-secret-32-bytes
-      NOTEGATE_LOOKUP_ROOT_KEY_ID: e2e-lookup
-      NOTEGATE_LOOKUP_ROOT_SECRET: e2e-distinct-lookup-root-secret-32b
       NOTEGATE_S3__ENDPOINT: http://127.0.0.1:9000
       NOTEGATE_S3__PUBLIC_ENDPOINT: http://127.0.0.1:9000
       NOTEGATE_S3__REGION: us-east-1
@@ -219,6 +215,30 @@ jobs:
           NOTEGATE_S3_SECRET_KEY: ${{ env.NOTEGATE_S3__SECRET_KEY }}
         shell: private_run.sh {0}
         run: bash deploy/ci/start-minio.sh
+
+      - name: Load source-owned crypto fixtures
+        shell: private_run.sh {0}
+        run: |
+          python3 - <<'PYTHON'
+          import os
+          import re
+          from pathlib import Path
+
+          example = Path("deploy/.env.example")
+          if not example.is_file():
+              example = Path(".env.example")
+          values = {}
+          for line in example.read_text().splitlines():
+              name, separator, value = line.partition("=")
+              if separator and re.fullmatch(r"NOTEGATE_(?:ENC|LOOKUP)_ROOT_[A-Z_]+", name):
+                  if not value or name in values:
+                      raise SystemExit("Invalid source crypto fixture")
+                  values[name] = value
+          if len(values) != 4:
+              raise SystemExit("Expected two source crypto fixture pairs")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as output:
+              output.writelines(f"{name}={value}\n" for name, value in values.items())
+          PYTHON
 
       - name: Seed two disposable owners
         id: identity

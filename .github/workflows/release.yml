@@ -457,14 +457,18 @@ jobs:
         shell: private_run.sh {0}
         run: rustup target add "$TARGET"
 
-      - name: Build notegate-cli
+      - name: Build NoteHub CLI
         working-directory: source
         env:
           TARGET: ${{ matrix.target }}
         shell: private_run.sh {0}
-        run: cargo build --manifest-path "${{ hashFiles('source/backend/Cargo.toml') != '' && 'backend/Cargo.toml' || 'Cargo.toml' }}" --locked --release -p notegate-cli --target "$TARGET"
+        run: |
+          cli_manifest=crates/cli/Cargo.toml
+          [[ ! -f backend/crates/cli/Cargo.toml ]] || cli_manifest=backend/crates/cli/Cargo.toml
+          cli_package="$(python3 -c 'import sys, tomllib; print(tomllib.load(open(sys.argv[1], "rb"))["package"]["name"])' "$cli_manifest")"
+          cargo build --manifest-path "${{ hashFiles('source/backend/Cargo.toml') != '' && 'backend/Cargo.toml' || 'Cargo.toml' }}" --locked --release -p "$cli_package" --target "$TARGET"
 
-      - name: Smoke test and package notegate-cli
+      - name: Smoke test and package NoteHub CLI
         working-directory: source
         shell: private_run.sh {0}
         env:

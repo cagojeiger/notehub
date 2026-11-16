@@ -457,14 +457,14 @@ jobs:
         shell: private_run.sh {0}
         run: rustup target add "$TARGET"
 
-      - name: Build notegate-cli
+      - name: Build NoteHub CLI
         working-directory: source
         env:
           TARGET: ${{ matrix.target }}
         shell: private_run.sh {0}
-        run: cargo build --manifest-path "${{ hashFiles('source/backend/Cargo.toml') != '' && 'backend/Cargo.toml' || 'Cargo.toml' }}" --locked --release -p notegate-cli --target "$TARGET"
+        run: cargo build --manifest-path "${{ hashFiles('source/backend/Cargo.toml') != '' && 'backend/Cargo.toml' || 'Cargo.toml' }}" --locked --release -p notehub-cli --target "$TARGET"
 
-      - name: Smoke test and package notegate-cli
+      - name: Smoke test and package NoteHub CLI
         working-directory: source
         shell: private_run.sh {0}
         env:

@@ -28,6 +28,8 @@ on:
     secrets:
       CORE_READ_APP_PRIVATE_KEY:
         required: false
+      RUST_WORKSPACE_CACHE_KEY:
+        required: false
 
 permissions:
   contents: read
@@ -164,6 +166,28 @@ jobs:
         if: steps.compiled_restore.outputs.cache-hit == 'true'
         id: compiled_prepare
         run: python3 .control/.github/scripts/ci_dependency_cache.py prepare --kind cargo-target >/dev/null 2>&1
+      - name: Plan encrypted workspace cache
+        if: inputs.core == 'notehub-core' && inputs.task == 'build'
+        id: workspace
+        env:
+          RUST_WORKSPACE_CACHE_KEY: ${{ secrets.RUST_WORKSPACE_CACHE_KEY }}
+          TESTED_SHA: ${{ inputs.tested_sha }}
+        run: python3 .control/.github/scripts/ci_workspace_cache.py plan >/dev/null 2>&1
+      - name: Restore encrypted workspace cache
+        if: steps.workspace.outputs.enabled == 'true'
+        id: workspace_restore
+        continue-on-error: true
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.workspace.outputs.path }}
+          key: ${{ steps.workspace.outputs.key }}
+          restore-keys: ${{ steps.workspace.outputs.prefix }}
+      - name: Authenticate and restore workspace outputs
+        if: steps.workspace_restore.outputs.cache-matched-key != ''
+        id: workspace_prepare
+        env:
+          RUST_WORKSPACE_CACHE_KEY: ${{ secrets.RUST_WORKSPACE_CACHE_KEY }}
+        run: python3 .control/.github/scripts/ci_workspace_cache.py restore >/dev/null 2>&1
       - name: Set up pnpm for API probes
         if: inputs.task == 'api' && hashFiles('source/frontend/package.json') != ''
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
@@ -188,6 +212,20 @@ jobs:
         with:
           path: ${{ steps.compiled.outputs.path }}
           key: ${{ steps.compiled.outputs.key }}
+      - name: Encrypt workspace outputs from main before tests
+        if: inputs.core == 'notehub-core' && inputs.task == 'build' && fromJSON(inputs.request).request.event == 'push' && steps.workspace.outputs.enabled == 'true' && steps.workspace_restore.outputs.cache-hit != 'true'
+        id: workspace_export
+        env:
+          RUST_WORKSPACE_CACHE_KEY: ${{ secrets.RUST_WORKSPACE_CACHE_KEY }}
+          CACHE_SOURCE_EVENT: ${{ fromJSON(inputs.request).request.event }}
+        run: python3 .control/.github/scripts/ci_workspace_cache.py export >/dev/null 2>&1
+      - name: Save encrypted workspace outputs from main
+        if: steps.workspace_export.outputs.exported == 'true'
+        continue-on-error: true
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.workspace.outputs.path }}
+          key: ${{ steps.workspace.outputs.key }}
       - name: Install image scanner
         if: (inputs.task == 'build' && inputs.core == 'mossden-core') || (inputs.task == 'ci' && inputs.core == 'cloud-core')
         run: bash .control/deploy/ci/install-trivy.sh
@@ -230,3 +268,8 @@ jobs:
           ARCHIVES: ${{ format('archives eligible={0}, hit={1}, prepared={2}, reason={3} {4}', steps.archives.outputs.enabled, steps.archives_restore.outputs.cache-hit, steps.archives_prepare.outputs.prepared, steps.archives.outputs.reason, steps.archives_prepare.outputs.reason) }}
           COMPILED: ${{ format('compiled eligible={0}, hit={1}, prepared={2}, exported={3}, reason={4} {5} {6}', steps.compiled.outputs.enabled, steps.compiled_restore.outputs.cache-hit, steps.compiled_prepare.outputs.prepared, steps.compiled_export.outputs.exported, steps.compiled.outputs.reason, steps.compiled_prepare.outputs.reason, steps.compiled_export.outputs.reason) }}
         run: printf '%s\n' "$ARCHIVES" "$COMPILED" >> "$GITHUB_STEP_SUMMARY"
+      - name: Summarize encrypted workspace cache
+        if: always() && steps.worker.outcome == 'success' && inputs.core == 'notehub-core' && inputs.task == 'build'
+        env:
+          WORKSPACE: ${{ format('encrypted workspace eligible={0}, hit={1}, prepared={2}, restore_seconds={3}, exported={4}, export_seconds={5}, bytes={6}', steps.workspace.outputs.enabled, steps.workspace_restore.outputs.cache-hit, steps.workspace_prepare.outputs.prepared, steps.workspace_prepare.outputs.seconds, steps.workspace_export.outputs.exported, steps.workspace_export.outputs.seconds, steps.workspace_export.outputs.bytes || steps.workspace_prepare.outputs.bytes) }}
+        run: printf '%s\n' "$WORKSPACE" >> "$GITHUB_STEP_SUMMARY"

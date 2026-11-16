@@ -398,6 +398,11 @@ jobs:
           - target: aarch64-apple-darwin
             runner: macos-15
     steps:
+      - name: Set up Python for CLI metadata
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.13'
+
       - name: Create short-lived core read token
         id: core-token
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3

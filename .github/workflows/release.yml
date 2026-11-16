@@ -398,11 +398,6 @@ jobs:
           - target: aarch64-apple-darwin
             runner: macos-15
     steps:
-      - name: Set up Python for CLI metadata
-        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
-        with:
-          python-version: '3.13'
-
       - name: Create short-lived core read token
         id: core-token
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
@@ -467,11 +462,7 @@ jobs:
         env:
           TARGET: ${{ matrix.target }}
         shell: private_run.sh {0}
-        run: |
-          cli_manifest=crates/cli/Cargo.toml
-          [[ ! -f backend/crates/cli/Cargo.toml ]] || cli_manifest=backend/crates/cli/Cargo.toml
-          cli_package="$(python3 -c 'import sys, tomllib; print(tomllib.load(open(sys.argv[1], "rb"))["package"]["name"])' "$cli_manifest")"
-          cargo build --manifest-path "${{ hashFiles('source/backend/Cargo.toml') != '' && 'backend/Cargo.toml' || 'Cargo.toml' }}" --locked --release -p "$cli_package" --target "$TARGET"
+        run: cargo build --manifest-path "${{ hashFiles('source/backend/Cargo.toml') != '' && 'backend/Cargo.toml' || 'Cargo.toml' }}" --locked --release -p notehub-cli --target "$TARGET"
 
       - name: Smoke test and package NoteHub CLI
         working-directory: source

@@ -42,10 +42,12 @@ go test ./...
 
 ## 릴리즈
 
-새 버전은 `VERSION`과 `openapi.yaml`의 `info.version`에 적습니다. 동일한
-main 커밋의 **Renderer CI**가 통과하면 **Renderer Release**에서 main과 버전을
-선택해 실행합니다. 렌더러 관련 변경이 없는 main 커밋은 **Renderer CI**를
-수동으로 실행할 수 있습니다.
+새 릴리스 버전은 이 디렉터리의 `VERSION`에 적습니다. 해당 main 커밋의
+**Renderer CI**가 통과하면 **Renderer Release**에서 main을 선택해 실행합니다.
+릴리스 워크플로가 그 커밋의 `VERSION`을 읽어 태그를 만듭니다.
+렌더러 관련 변경이 없는 main 커밋에서는 **Renderer CI**를 수동으로
+실행할 수 있습니다. `openapi.yaml`의 `info.version`은 API 문서가 바뀔 때
+갱신합니다.
 
 Linux amd64·arm64 이미지에서 각각 1,024개 노드 샘플을 렌더링합니다.
 테스트한 digest를 기존 공개 패키지 `ghcr.io/cagojeiger/d2-diagram-renderer`에

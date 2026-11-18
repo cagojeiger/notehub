@@ -48,9 +48,7 @@ jobs:
           node-version: '24'
           package-manager-cache: false
       - name: Check OpenAPI
-        run: |
-          npx --yes @redocly/cli@2.79.0 lint --extends minimal openapi.yaml
-          grep -Fx "  version: $(cat VERSION)" openapi.yaml
+        run: npx --yes @redocly/cli@2.79.0 lint --extends minimal openapi.yaml
       - name: Build and smoke-test the image
         run: |
           docker build --tag renderer:ci .

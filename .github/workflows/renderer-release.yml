@@ -2,11 +2,6 @@ name: Renderer Release
 
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        description: Version from services/renderer/VERSION (for example, 0.1.1)
-        required: true
-        type: string
 
 concurrency:
   group: renderer-release
@@ -38,7 +33,6 @@ jobs:
         id: version
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REQUESTED_VERSION: ${{ inputs.version }}
         run: |
           main=$(git ls-remote --exit-code origin refs/heads/main | cut -f1)
           if [[ "$main" != "$SOURCE_SHA" ]]; then
@@ -47,9 +41,8 @@ jobs:
           fi
 
           version=$(cat VERSION)
-          [[ "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
-          if [[ "$version" != "$REQUESTED_VERSION" ]]; then
-            echo "::error::Requested version must match VERSION."
+          if [[ ! "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error file=services/renderer/VERSION::Expected a version in X.Y.Z format."
             exit 1
           fi
 

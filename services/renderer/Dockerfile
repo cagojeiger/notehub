@@ -4,14 +4,14 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY main.go render.go ./
 ARG TARGETOS TARGETARCH
-RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags="-s -w" -o /d2-diagram-renderer .
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags="-s -w" -o /renderer .
 
 FROM scratch
 LABEL org.opencontainers.image.source="https://github.com/cagojeiger/notehub" \
       org.opencontainers.image.licenses="Apache-2.0"
-COPY --from=build /d2-diagram-renderer /d2-diagram-renderer
+COPY --from=build /renderer /renderer
 COPY LICENSE THIRD_PARTY_NOTICES.md /
 ENV LISTEN_ADDR=:8080
 USER 10001:10001
 EXPOSE 8080
-ENTRYPOINT ["/d2-diagram-renderer"]
+ENTRYPOINT ["/renderer"]

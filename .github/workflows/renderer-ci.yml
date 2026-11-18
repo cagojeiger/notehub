@@ -53,5 +53,5 @@ jobs:
           grep -Fx "  version: $(cat VERSION)" openapi.yaml
       - name: Build and smoke-test the image
         run: |
-          docker build --tag d2-diagram-renderer:ci .
-          bash scripts/smoke-image.sh d2-diagram-renderer:ci linux/amd64
+          docker build --tag renderer:ci .
+          bash scripts/smoke-image.sh renderer:ci linux/amd64

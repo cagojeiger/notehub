@@ -1263,11 +1263,11 @@ jobs:
         id: full-audit
         continue-on-error: ${{ needs.gate.outputs.source_event == 'push' }}
         shell: private_run.sh {0}
-        run: python3 "$GITHUB_WORKSPACE/.control/.github/scripts/npm_release_audit.py" collect
+        run: bash "$GITHUB_WORKSPACE/.control/.github/scripts/npm_release_audit.sh" collect
 
       - name: Verify npm audit result and release exception
         shell: bash
         env:
           NPM_AUDIT_OUTCOME: ${{ steps.full-audit.outcome }}
           NPM_AUDIT_EVENT: ${{ needs.gate.outputs.source_event }}
-        run: python3 "$GITHUB_WORKSPACE/.control/.github/scripts/npm_release_audit.py" verify
+        run: bash "$GITHUB_WORKSPACE/.control/.github/scripts/npm_release_audit.sh" verify

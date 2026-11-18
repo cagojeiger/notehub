@@ -54,7 +54,6 @@ Linux amd64·arm64 이미지에서 각각 1,024개 노드 샘플을 렌더링합
 
 공개 렌더러 패키지의 [Manage Actions access](https://docs.github.com/en/packages/learn-github-packages/configuring-a-packages-access-control-and-visibility#github-actions-access-for-packages-scoped-to-personal-accounts)에서
 `cagojeiger/notehub`에 Write 권한을 부여해야 발행할 수 있습니다.
-[v0.1.0 릴리즈](https://github.com/cagojeiger/d2-diagram-renderer/releases/tag/v0.1.0)는 기존 리포에서 확인할 수 있습니다.
 
 ## 라이선스
 

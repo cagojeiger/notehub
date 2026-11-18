@@ -1242,7 +1242,7 @@ jobs:
           private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
           sha: ${{ needs.gate.outputs.tested_sha }}
           path: source
-          fetch-depth: 1
+          fetch-depth: 2
 
       - name: Set up pnpm
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
@@ -1260,5 +1260,14 @@ jobs:
         run: pnpm --dir "${{ hashFiles('source/frontend/pnpm-workspace.yaml') != '' && 'frontend' || '.' }}" install --frozen-lockfile --ignore-scripts
 
       - name: Audit all npm dependencies
+        id: full-audit
+        continue-on-error: ${{ needs.gate.outputs.source_event == 'push' }}
         shell: private_run.sh {0}
-        run: pnpm --dir "${{ hashFiles('source/frontend/pnpm-workspace.yaml') != '' && 'frontend' || '.' }}" audit --audit-level moderate
+        run: bash "$GITHUB_WORKSPACE/.control/.github/scripts/npm_release_audit.sh" collect
+
+      - name: Verify npm audit result and release exception
+        shell: bash
+        env:
+          NPM_AUDIT_OUTCOME: ${{ steps.full-audit.outcome }}
+          NPM_AUDIT_EVENT: ${{ needs.gate.outputs.source_event }}
+        run: bash "$GITHUB_WORKSPACE/.control/.github/scripts/npm_release_audit.sh" verify

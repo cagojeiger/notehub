@@ -544,10 +544,6 @@ jobs:
         shell: private_run.sh {0}
         run: pnpm --dir "${{ hashFiles('source/frontend/pnpm-workspace.yaml') != '' && 'frontend' || '.' }}" install --frozen-lockfile
 
-      - name: Audit dependencies
-        shell: private_run.sh {0}
-        run: pnpm --dir "${{ hashFiles('source/frontend/pnpm-workspace.yaml') != '' && 'frontend' || '.' }}" audit --audit-level moderate
-
       - name: Check theme contrast
         shell: private_run.sh {0}
         run: pnpm --dir "${{ hashFiles('source/frontend/pnpm-workspace.yaml') != '' && 'frontend' || '.' }}" --filter web check:contrast

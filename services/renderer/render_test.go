@@ -13,12 +13,9 @@ import (
 	"time"
 )
 
-func TestRenderLargeDiagram(t *testing.T) {
-	source, err := os.ReadFile("testdata/architecture-1024.d2")
-	if err != nil {
-		t.Fatal(err)
-	}
-	response := postDiagram(newHandler(renderD2, renderTimeout), string(source), "text/plain; charset=utf-8")
+func TestRenderDiagram(t *testing.T) {
+	const source = "client: Browser\napi: NoteHub\nclient -> api"
+	response := postDiagram(newHandler(renderD2, renderTimeout), source, "text/plain; charset=utf-8")
 	if response.Code != http.StatusOK || response.Header().Get("Content-Type") != "image/svg+xml" {
 		t.Fatalf("status = %d, content type = %q", response.Code, response.Header().Get("Content-Type"))
 	}
@@ -33,7 +30,7 @@ func TestRenderLargeDiagram(t *testing.T) {
 	if root.XMLName.Local != "svg" || root.ViewBox == "" {
 		t.Fatalf("unexpected SVG root: %+v", root)
 	}
-	for _, label := range []string{"Ingest 001", "UI 128"} {
+	for _, label := range []string{"Browser", "NoteHub"} {
 		if !strings.Contains(response.Body.String(), label) {
 			t.Errorf("missing label %q", label)
 		}

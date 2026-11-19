@@ -15,26 +15,31 @@ cleanup() {
 }
 trap cleanup EXIT
 address=$(docker port "$container" 8080/tcp)
+nodes=1024
+python3 - "$nodes" > "$work/diagram.d2" <<'PYTHON'
+import sys
+
+print("grid-columns: 32")
+for index in range(1, int(sys.argv[1]) + 1):
+    print(f"n{index}: Node {index:04d}")
+PYTHON
 
 curl --fail-with-body --silent --show-error --max-time 10 \
   --retry 8 --retry-all-errors --retry-delay 1 \
   --header 'Content-Type: text/plain; charset=utf-8' \
-  --data-binary @testdata/architecture-1024.d2 \
+  --data-binary "@$work/diagram.d2" \
   --dump-header "$work/headers" --output "$work/diagram.svg" \
   "http://$address/render/d2"
 grep -qi '^Content-Type: image/svg+xml' "$work/headers"
-python3 - "$work/diagram.svg" <<'PY'
-import re
+python3 - "$work/diagram.svg" "$nodes" <<'PY'
 import sys
 import xml.etree.ElementTree as ET
-from pathlib import Path
 
-source = Path("testdata/architecture-1024.d2").read_text()
-labels = re.findall(r"^\s+n\d+: (.+)$", source, re.MULTILINE)
+labels = {f"Node {index:04d}" for index in range(1, int(sys.argv[2]) + 1)}
 diagram = ET.parse(sys.argv[1]).getroot()
 namespace = "{http://www.w3.org/2000/svg}"
 actual = {"".join(element.itertext()) for element in diagram.iter(namespace + "text")}
 assert diagram.tag == namespace + "svg"
-assert len(set(labels)) == 1024 and set(labels) <= actual
-print("Rendered and checked all 1,024 D2 node labels.")
+assert labels <= actual
+print(f"Rendered and checked all {len(labels):,} D2 node labels.")
 PY

@@ -127,7 +127,7 @@ func assertError(t *testing.T, response *httptest.ResponseRecorder, wantStatus i
 	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
 		t.Fatal(err)
 	}
-	if body.Code != wantCode || body.Message == "" {
+	if string(body.Code) != wantCode || body.Message == "" {
 		t.Fatalf("expected %s with a message, got %+v", wantCode, body)
 	}
 	return body

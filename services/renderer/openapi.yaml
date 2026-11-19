@@ -43,12 +43,23 @@ paths:
           $ref: '#/components/responses/RenderTimeout'
 components:
   schemas:
+    ErrorCode:
+      type: string
+      enum:
+        - invalid_source
+        - source_too_large
+        - unsupported_media_type
+        - invalid_diagram
+        - svg_too_large
+        - render_failed
+        - renderer_busy
+        - render_timeout
     Error:
       type: object
       required: [code, message]
       properties:
         code:
-          type: string
+          $ref: '#/components/schemas/ErrorCode'
         message:
           type: string
         diagnostic:
@@ -84,7 +95,7 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
     UnrenderableDiagram:
-      description: Compilation failed (invalid_diagram) or the SVG exceeds 2 MiB (svg_too_large).
+      description: Compilation failed or a file import was blocked (invalid_diagram), or the SVG exceeds 2 MiB (svg_too_large).
       content:
         application/json:
           schema:

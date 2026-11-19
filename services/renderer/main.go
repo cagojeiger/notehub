@@ -27,8 +27,21 @@ type renderResult struct {
 	err error
 }
 
+type errorCode string
+
+const (
+	codeInvalidSource        errorCode = "invalid_source"
+	codeSourceTooLarge       errorCode = "source_too_large"
+	codeUnsupportedMediaType errorCode = "unsupported_media_type"
+	codeInvalidDiagram       errorCode = "invalid_diagram"
+	codeSVGTooLarge          errorCode = "svg_too_large"
+	codeRenderFailed         errorCode = "render_failed"
+	codeRendererBusy         errorCode = "renderer_busy"
+	codeRenderTimeout        errorCode = "render_timeout"
+)
+
 type apiError struct {
-	Code       string            `json:"code"`
+	Code       errorCode         `json:"code"`
 	Message    string            `json:"message"`
 	Diagnostic *sourceDiagnostic `json:"diagnostic,omitempty"`
 }
@@ -61,7 +74,7 @@ func newHandler(render renderFunc, timeout time.Duration) http.Handler {
 
 		mediaType, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 		if err != nil || mediaType != "text/plain" || !isUTF8(params["charset"]) {
-			writeError(w, http.StatusUnsupportedMediaType, "unsupported_media_type", "Send UTF-8 text/plain.")
+			writeError(w, http.StatusUnsupportedMediaType, codeUnsupportedMediaType, "Send UTF-8 text/plain.")
 			return
 		}
 
@@ -69,23 +82,23 @@ func newHandler(render renderFunc, timeout time.Duration) http.Handler {
 		if err != nil {
 			var tooLarge *http.MaxBytesError
 			if errors.As(err, &tooLarge) {
-				writeError(w, http.StatusRequestEntityTooLarge, "source_too_large", "The D2 source exceeds 128 KiB.")
+				writeError(w, http.StatusRequestEntityTooLarge, codeSourceTooLarge, "The D2 source exceeds 128 KiB.")
 				return
 			}
-			writeError(w, http.StatusBadRequest, "invalid_source", "The D2 source could not be read.")
+			writeError(w, http.StatusBadRequest, codeInvalidSource, "The D2 source could not be read.")
 			return
 		}
 
 		source := string(body)
 		if !utf8.Valid(body) || strings.TrimSpace(source) == "" {
-			writeError(w, http.StatusBadRequest, "invalid_source", "Send non-empty UTF-8 D2 source.")
+			writeError(w, http.StatusBadRequest, codeInvalidSource, "Send non-empty UTF-8 D2 source.")
 			return
 		}
 
 		select {
 		case slot <- struct{}{}:
 		default:
-			writeError(w, http.StatusServiceUnavailable, "renderer_busy", "A render is already running.")
+			writeError(w, http.StatusServiceUnavailable, codeRendererBusy, "A render is already running.")
 			return
 		}
 
@@ -108,20 +121,20 @@ func newHandler(render renderFunc, timeout time.Duration) http.Handler {
 
 		select {
 		case <-ctx.Done():
-			writeError(w, http.StatusGatewayTimeout, "render_timeout", "The render deadline was exceeded.")
+			writeError(w, http.StatusGatewayTimeout, codeRenderTimeout, "The render deadline was exceeded.")
 		case result := <-done:
 			var invalid *invalidDiagram
 			switch {
 			case ctx.Err() != nil:
-				writeError(w, http.StatusGatewayTimeout, "render_timeout", "The render deadline was exceeded.")
+				writeError(w, http.StatusGatewayTimeout, codeRenderTimeout, "The render deadline was exceeded.")
 			case errors.As(result.err, &invalid):
 				writeErrorResponse(w, http.StatusUnprocessableEntity, apiError{
-					Code: "invalid_diagram", Message: invalid.message, Diagnostic: invalid.diagnostic,
+					Code: codeInvalidDiagram, Message: invalid.message, Diagnostic: invalid.diagnostic,
 				})
 			case result.err != nil:
-				writeError(w, http.StatusInternalServerError, "render_failed", "The D2 renderer failed.")
+				writeError(w, http.StatusInternalServerError, codeRenderFailed, "The D2 renderer failed.")
 			case len(result.svg) > maxSVGBytes:
-				writeError(w, http.StatusUnprocessableEntity, "svg_too_large", "The rendered SVG exceeds 2 MiB.")
+				writeError(w, http.StatusUnprocessableEntity, codeSVGTooLarge, "The rendered SVG exceeds 2 MiB.")
 			default:
 				w.Header().Set("Content-Type", "image/svg+xml")
 				w.Header().Set("Content-Security-Policy", "sandbox; default-src 'none'; style-src 'unsafe-inline'; font-src data:; img-src data:")
@@ -136,7 +149,7 @@ func isUTF8(charset string) bool {
 	return charset == "" || strings.EqualFold(charset, "utf-8")
 }
 
-func writeError(w http.ResponseWriter, status int, code, message string) {
+func writeError(w http.ResponseWriter, status int, code errorCode, message string) {
 	writeErrorResponse(w, status, apiError{Code: code, Message: message})
 }
 

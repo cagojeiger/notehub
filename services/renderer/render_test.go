@@ -60,6 +60,18 @@ func TestRenderRequestErrors(t *testing.T) {
 	}
 }
 
+func TestRenderReportsSourceDiagnostic(t *testing.T) {
+	response := postDiagram(newHandler(renderD2, renderTimeout), "# 렌더 실패 확인\nreview_error: {\n", "text/plain")
+	body := assertError(t, response, http.StatusUnprocessableEntity, "invalid_diagram")
+	want := sourceDiagnostic{Line: 2, Column: 15, Message: "maps must be terminated with }"}
+	if body.Diagnostic == nil || *body.Diagnostic != want {
+		t.Fatalf("expected diagnostic %+v, got %s", want, response.Body)
+	}
+	if strings.Contains(body.Message, "imports") {
+		t.Fatalf("unexpected import guidance for a syntax error: %s", body.Message)
+	}
+}
+
 func TestRendererDoesNotOpenHostImports(t *testing.T) {
 	input := filepath.Join(t.TempDir(), "included.d2")
 	if err := os.WriteFile(input, []byte("label: local test fixture\n"), 0o600); err != nil {
@@ -67,9 +79,9 @@ func TestRendererDoesNotOpenHostImports(t *testing.T) {
 	}
 	handler := newHandler(renderD2, renderTimeout)
 	response := postDiagram(handler, "...@"+input, "text/plain")
-	assertError(t, response, http.StatusUnprocessableEntity, "invalid_diagram")
-	if strings.Contains(response.Body.String(), input) {
-		t.Fatal("the response exposed a host path")
+	body := assertError(t, response, http.StatusUnprocessableEntity, "invalid_diagram")
+	if body.Diagnostic != nil || !strings.Contains(body.Message, "imports are disabled") || strings.Contains(response.Body.String(), input) {
+		t.Fatalf("expected only an import restriction message, got %s", response.Body)
 	}
 }
 
@@ -108,7 +120,7 @@ func postDiagram(handler http.Handler, body, contentType string) *httptest.Respo
 	return response
 }
 
-func assertError(t *testing.T, response *httptest.ResponseRecorder, wantStatus int, wantCode string) {
+func assertError(t *testing.T, response *httptest.ResponseRecorder, wantStatus int, wantCode string) apiError {
 	t.Helper()
 	if response.Code != wantStatus || response.Header().Get("Content-Type") != "application/json" {
 		t.Fatalf("expected HTTP %d with JSON, got %d %s", wantStatus, response.Code, response.Header().Get("Content-Type"))
@@ -121,4 +133,5 @@ func assertError(t *testing.T, response *httptest.ResponseRecorder, wantStatus i
 	if body.Code != wantCode || body.Message == "" {
 		t.Fatalf("expected %s with a message, got %+v", wantCode, body)
 	}
+	return body
 }

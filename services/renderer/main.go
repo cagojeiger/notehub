@@ -28,8 +28,9 @@ type renderResult struct {
 }
 
 type apiError struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
+	Code       string            `json:"code"`
+	Message    string            `json:"message"`
+	Diagnostic *sourceDiagnostic `json:"diagnostic,omitempty"`
 }
 
 func main() {
@@ -109,11 +110,14 @@ func newHandler(render renderFunc, timeout time.Duration) http.Handler {
 		case <-ctx.Done():
 			writeError(w, http.StatusGatewayTimeout, "render_timeout", "The render deadline was exceeded.")
 		case result := <-done:
+			var invalid *invalidDiagram
 			switch {
 			case ctx.Err() != nil:
 				writeError(w, http.StatusGatewayTimeout, "render_timeout", "The render deadline was exceeded.")
-			case errors.Is(result.err, errInvalidDiagram):
-				writeError(w, http.StatusUnprocessableEntity, "invalid_diagram", "The D2 source could not be compiled. File imports are disabled.")
+			case errors.As(result.err, &invalid):
+				writeErrorResponse(w, http.StatusUnprocessableEntity, apiError{
+					Code: "invalid_diagram", Message: invalid.message, Diagnostic: invalid.diagnostic,
+				})
 			case result.err != nil:
 				writeError(w, http.StatusInternalServerError, "render_failed", "The D2 renderer failed.")
 			case len(result.svg) > maxSVGBytes:
@@ -133,7 +137,11 @@ func isUTF8(charset string) bool {
 }
 
 func writeError(w http.ResponseWriter, status int, code, message string) {
+	writeErrorResponse(w, status, apiError{Code: code, Message: message})
+}
+
+func writeErrorResponse(w http.ResponseWriter, status int, body apiError) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(apiError{Code: code, Message: message})
+	_ = json.NewEncoder(w).Encode(body)
 }

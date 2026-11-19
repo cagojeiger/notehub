@@ -51,6 +51,19 @@ components:
           type: string
         message:
           type: string
+        diagnostic:
+          type: object
+          description: First source diagnostic when the D2 compiler reports a location.
+          required: [line, column, message]
+          properties:
+            line:
+              type: integer
+              minimum: 1
+            column:
+              type: integer
+              minimum: 1
+            message:
+              type: string
   responses:
     InvalidSource:
       description: Empty, unreadable, or non-UTF-8 source (invalid_source).

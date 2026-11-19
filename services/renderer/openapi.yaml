@@ -1,0 +1,112 @@
+openapi: 3.1.1
+info:
+  title: NoteHub Renderer
+  version: 0.1.1
+  description: Convert UTF-8 D2 text into an SVG image.
+servers:
+  - url: http://127.0.0.1:8080
+security: []
+paths:
+  /render/d2:
+    post:
+      operationId: renderD2
+      summary: Render D2 source as SVG
+      description: Uses the Dagre layout with 36 pixels of padding. File imports are disabled.
+      requestBody:
+        required: true
+        content:
+          text/plain:
+            schema:
+              type: string
+              description: Non-empty UTF-8 D2 source, at most 128 KiB.
+            example: browser -> api
+      responses:
+        '200':
+          description: SVG image, at most 2 MiB.
+          content:
+            image/svg+xml:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/InvalidSource'
+        '413':
+          $ref: '#/components/responses/SourceTooLarge'
+        '415':
+          $ref: '#/components/responses/WrongMediaType'
+        '422':
+          $ref: '#/components/responses/UnrenderableDiagram'
+        '500':
+          $ref: '#/components/responses/RenderFailure'
+        '503':
+          $ref: '#/components/responses/RendererUnavailable'
+components:
+  schemas:
+    ErrorCode:
+      type: string
+      enum:
+        - invalid_source
+        - source_too_large
+        - unsupported_media_type
+        - invalid_diagram
+        - svg_too_large
+        - render_failed
+        - renderer_busy
+        - render_timeout
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          $ref: '#/components/schemas/ErrorCode'
+        message:
+          type: string
+        diagnostic:
+          type: object
+          description: First source diagnostic when the D2 compiler reports a location.
+          required: [line, column, message]
+          properties:
+            line:
+              type: integer
+              minimum: 1
+            column:
+              type: integer
+              minimum: 1
+            message:
+              type: string
+  responses:
+    InvalidSource:
+      description: Empty, unreadable, or non-UTF-8 source (invalid_source).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    SourceTooLarge:
+      description: Source exceeds 128 KiB (source_too_large).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    WrongMediaType:
+      description: The request requires UTF-8 text/plain (unsupported_media_type).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    UnrenderableDiagram:
+      description: Compilation failed or a file import was blocked (invalid_diagram), or the SVG exceeds 2 MiB (svg_too_large).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    RenderFailure:
+      description: The renderer failed (render_failed).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    RendererUnavailable:
+      description: Another render is running (renderer_busy) or the render exceeded its 3-second deadline (render_timeout).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

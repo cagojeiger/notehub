@@ -1,0 +1,55 @@
+name: Renderer CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'services/renderer/**'
+      - '.github/workflows/renderer-ci.yml'
+      - '.github/workflows/renderer-release.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'services/renderer/**'
+      - '.github/workflows/renderer-ci.yml'
+      - '.github/workflows/renderer-release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    if: github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    defaults:
+      run:
+        working-directory: services/renderer
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: services/renderer/go.mod
+          cache-dependency-path: services/renderer/go.sum
+      - name: Check Go
+        run: |
+          test -z "$(gofmt -l .)"
+          go vet ./...
+          go test -race ./...
+      - name: Check Go vulnerabilities
+        run: |
+          GOTOOLCHAIN=local go install golang.org/x/vuln/cmd/govulncheck@v1.3.0
+          "$(go env GOPATH)/bin/govulncheck" ./...
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Check OpenAPI
+        run: npx --yes @redocly/cli@2.79.0 lint --extends minimal openapi.yaml
+      - name: Build and smoke-test the image
+        run: |
+          docker build --tag renderer:ci .
+          bash scripts/smoke-image.sh renderer:ci linux/amd64

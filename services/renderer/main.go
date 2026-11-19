@@ -121,12 +121,12 @@ func newHandler(render renderFunc, timeout time.Duration) http.Handler {
 
 		select {
 		case <-ctx.Done():
-			writeError(w, http.StatusGatewayTimeout, codeRenderTimeout, "The render deadline was exceeded.")
+			writeError(w, http.StatusServiceUnavailable, codeRenderTimeout, "The render deadline was exceeded.")
 		case result := <-done:
 			var invalid *invalidDiagram
 			switch {
 			case ctx.Err() != nil:
-				writeError(w, http.StatusGatewayTimeout, codeRenderTimeout, "The render deadline was exceeded.")
+				writeError(w, http.StatusServiceUnavailable, codeRenderTimeout, "The render deadline was exceeded.")
 			case errors.As(result.err, &invalid):
 				writeErrorResponse(w, http.StatusUnprocessableEntity, apiError{
 					Code: codeInvalidDiagram, Message: invalid.message, Diagnostic: invalid.diagnostic,

@@ -38,9 +38,7 @@ paths:
         '500':
           $ref: '#/components/responses/RenderFailure'
         '503':
-          $ref: '#/components/responses/RendererBusy'
-        '504':
-          $ref: '#/components/responses/RenderTimeout'
+          $ref: '#/components/responses/RendererUnavailable'
 components:
   schemas:
     ErrorCode:
@@ -106,14 +104,8 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
-    RendererBusy:
-      description: Another render is running (renderer_busy).
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-    RenderTimeout:
-      description: The HTTP render deadline elapsed (render_timeout).
+    RendererUnavailable:
+      description: Another render is running (renderer_busy) or the render exceeded its 3-second deadline (render_timeout).
       content:
         application/json:
           schema:

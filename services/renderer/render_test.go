@@ -98,7 +98,7 @@ func TestRenderTimeoutKeepsSlotOccupiedUntilRenderStops(t *testing.T) {
 		response <- postDiagram(handler, "a -> b", "text/plain")
 	}()
 	<-started
-	assertError(t, <-response, http.StatusGatewayTimeout, "render_timeout")
+	assertError(t, <-response, http.StatusServiceUnavailable, "render_timeout")
 	assertError(t, postDiagram(handler, "c -> d", "text/plain"), http.StatusServiceUnavailable, "renderer_busy")
 }
 

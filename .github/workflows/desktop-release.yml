@@ -1,4 +1,4 @@
-name: NoteHub Bar release
+name: NoteHub Quick release
 on:
   workflow_dispatch:
 
@@ -56,10 +56,10 @@ jobs:
           version=$(cat core/apps/desktop/VERSION)
           core/apps/desktop/build.sh "$RUNNER_TEMP/bar"
           mkdir "$RUNNER_TEMP/feed"
-          mv "$RUNNER_TEMP/bar/NoteHub-Bar-$version.dmg" "$RUNNER_TEMP/feed/"
+          mv "$RUNNER_TEMP/bar/NoteHub-Quick-$version.dmg" "$RUNNER_TEMP/feed/"
           printf '%s' "$BAR_SIGNING_KEY" | "$RUNNER_TEMP/bar/sdk/bin/generate_appcast" \
             --ed-key-file - --maximum-deltas 0 \
-            --download-url-prefix "https://github.com/$GITHUB_REPOSITORY/releases/download/bar-v$version/" "$RUNNER_TEMP/feed"
+            --download-url-prefix "https://github.com/$GITHUB_REPOSITORY/releases/download/quick-v$version/" "$RUNNER_TEMP/feed"
       - name: Publish installer then update feed
         env:
           GH_TOKEN: ${{ github.token }}

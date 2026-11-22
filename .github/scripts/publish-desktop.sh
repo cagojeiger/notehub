@@ -2,11 +2,11 @@
 set -euo pipefail
 SOURCE_SHA=$(git -C core rev-parse HEAD)
 version=$(cat core/apps/desktop/VERSION)
-tag=bar-v$version
-dmg=NoteHub-Bar-$version.dmg
+tag=quick-v$version
+dmg=NoteHub-Quick-$version.dmg
 feed="$RUNNER_TEMP/feed"
 repo="repos/$GITHUB_REPOSITORY"
-notes="NoteHub Bar $version (core $SOURCE_SHA)"
+notes="NoteHub Quick $version (core $SOURCE_SHA)"
 branch=desktop-updates
 
 # 버전별 릴리즈에 원본 피드도 보관해 게시 도중 실패하면 같은 파일로 복구한다.
@@ -14,7 +14,7 @@ if gh release view "$tag" --json body > "$RUNNER_TEMP/release.json"; then
     test "$(jq -r .body "$RUNNER_TEMP/release.json")" = "$notes"
 else
     gh release create "$tag" --draft --latest=false --target "$GITHUB_SHA" \
-        --title "NoteHub Bar $version" --notes "$notes"
+        --title "NoteHub Quick $version" --notes "$notes"
 fi
 if [[ $(gh release view "$tag" --json isDraft --jq .isDraft) = true ]]; then
     gh release upload "$tag" "$feed/$dmg" "$feed/appcast.xml" --clobber
@@ -33,7 +33,7 @@ ns = "{http://www.andymatuschak.org/xml-namespaces/sparkle}"
 item = ET.parse("appcast.xml").find("./channel/item")
 assert item.findtext(ns + "version") == version
 entry = item.find("enclosure")
-assert entry.get("url") == f"https://github.com/cagojeiger/notehub/releases/download/bar-v{version}/{name}"
+assert entry.get("url") == f"https://github.com/cagojeiger/notehub/releases/download/quick-v{version}/{name}"
 assert int(entry.attrib["length"]) == Path(name).stat().st_size
 Path("signature").write_text(entry.attrib[ns + "edSignature"])
 PY

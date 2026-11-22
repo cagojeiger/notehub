@@ -200,6 +200,29 @@ data
 
 ### sequence-interaction
 
+Each entry in `sequences` is a lane. Give its steps IDs under `children`, then connect two step IDs with a labeled message in `relations`.
+· `sequences`의 각 항목이 레인입니다. 각 레인의 단계를 `children`에 ID와 함께 작성하고, `relations`에서 두 단계의 ID를 메시지로 연결하세요.
+
+````markdown
+```infographic
+infographic sequence-interaction-compact-badge-card
+data
+  sequences
+    - label Browser
+      children
+        - id submit
+          label Submit
+    - label Server
+      children
+        - id store
+          label Store
+  relations
+    - from submit
+      to store
+      label Save note
+```
+````
+
 - `sequence-interaction-compact-animated-badge-card`
 - `sequence-interaction-compact-animated-capsule-item`
 - `sequence-interaction-compact-animated-compact-card`

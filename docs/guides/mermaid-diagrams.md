@@ -46,13 +46,13 @@ flowchart LR
 
 | Diagram · 종류 | Declaration · 선언 | Official syntax and examples · 공식 자료 |
 | --- | --- | --- |
-| Gantt · 일정과 의존성 | `gantt` | [Syntax · 문법](https://mermaid.js.org/syntax/gantt.html) · [Example · 예제](https://github.com/mermaid-js/mermaid/blob/mermaid%4012.3.0/packages/mermaid/src/docs/syntax/gantt.md#L296-L298) |
+| Gantt · 일정과 의존성 | `gantt` | [Syntax · 문법](https://mermaid.js.org/syntax/gantt.html) · [Example · 예제](https://github.com/mermaid-js/mermaid/blob/mermaid%4012.3.0/packages/mermaid/src/docs/syntax/gantt.md?plain=1#L24-L32) |
 | Timeline · 시점별 사건 | `timeline` | [Syntax · 문법](https://mermaid.js.org/syntax/timeline.html) · [Example · 예제](https://github.com/mermaid-js/mermaid/blob/mermaid%4012.3.0/packages/mermaid/src/docs/syntax/timeline.md#L52-L57) |
 | Kanban · 작업 보드 | `kanban` | [Syntax · 문법](https://mermaid.js.org/syntax/kanban.html) · [Example · 예제](https://github.com/mermaid-js/mermaid/blob/mermaid%4012.3.0/packages/mermaid/src/docs/syntax/kanban.md#L14-L16) |
 | Mindmap · 마인드맵 | `mindmap` | [Syntax · 문법](https://mermaid.js.org/syntax/mindmap.html) · [Example · 예제](https://github.com/mermaid-js/mermaid/blob/mermaid%4012.3.0/packages/mermaid/src/docs/syntax/mindmap.md#L95-L96) |
 | TreeView · 트리 목록 | `treeView-beta` | [Syntax · 문법](https://mermaid.js.org/syntax/treeView.html) · [Example · 예제](https://github.com/mermaid-js/mermaid/blob/mermaid%4012.3.0/packages/mermaid/src/docs/syntax/treeView.md#L219-L223) |
 | Ishikawa · 원인과 결과 | `ishikawa-beta` | [Syntax · 문법](https://mermaid.js.org/syntax/ishikawa.html) · [Example · 예제](https://github.com/mermaid-js/mermaid/blob/mermaid%4012.3.0/packages/mermaid/src/docs/syntax/ishikawa.md#L14-L33) |
-| Wardley map · 가치사슬과 진화 | `wardley-beta` | [Syntax · 문법](https://mermaid.js.org/syntax/wardley.html) · [Example · 예제](https://github.com/mermaid-js/mermaid/blob/mermaid%4012.3.0/packages/mermaid/src/docs/syntax/wardley.md#L391-L393) |
+| Wardley map · 가치사슬과 진화 | `wardley-beta` | [Syntax · 문법](https://mermaid.js.org/syntax/wardley.html) · [Example · 예제](https://github.com/mermaid-js/mermaid/blob/mermaid%4012.3.0/packages/mermaid/src/docs/syntax/wardley.md?plain=1#L30-L49) |
 | Cynefin · 의사결정 맥락 | `cynefin-beta` | [Syntax · 문법](https://mermaid.js.org/syntax/cynefin.html) · [Example · 예제](https://github.com/mermaid-js/mermaid/blob/mermaid%4012.3.0/packages/mermaid/src/docs/syntax/cynefin.md#L153-L159) |
 
 ## Charts and sets · 차트와 집합

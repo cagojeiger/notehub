@@ -1,38 +1,29 @@
-# Infographic templates · 인포그래픽 템플릿
+# Infographic templates
 
-[English authoring guide](document-authoring.md) · [한국어 작성 가이드](document-authoring.ko.md)
+[Document authoring guide](document-authoring.md)
 
 NoteHub uses the built-in registry from `@antv/infographic@0.2.20`. Copy an exact ID below. The six categories contain 273 template IDs. Three additional IDs are deprecated aliases.
 
-NoteHub가 사용하는 버전은 `@antv/infographic@0.2.20`입니다. 아래 ID를 그대로 복사해 사용하세요. 6개 분류에 템플릿 ID 273개가 있고, 이전 문서와의 호환을 위한 별칭이 3개 더 있습니다.
+Choose a category below, copy its Markdown example, and replace the template ID and data. The ID selects the layout. The data key determines how to supply its items.
 
-## Choose a template · 템플릿 선택하기
-
-| What you need · 찾는 정보 | Where to look · 확인할 곳 |
-| --- | --- |
-| Preview the layout · 그림 모양 확인 | [AntV gallery · 공식 갤러리](https://infographic.antv.vision/gallery). Search by template ID. 템플릿 ID로 검색하세요. |
-| Pick an ID supported by NoteHub · 지원 ID 선택 | [NoteHub template index · 분류별 목록](#template-index). Copy the exact ID for the installed version. 현재 버전에 등록된 ID를 복사하세요. |
-| Write the fenced block · 코드 블록 작성 | Follow the example under your category. 각 분류의 예제를 사용하세요. [AntV syntax · 공식 문법](https://infographic.antv.vision/learn/infographic-syntax) |
-| Fill in labels, values, or relationships · 데이터 채우기 | [AntV data reference · 데이터 필드](https://infographic.antv.vision/learn/data) |
+To compare layouts, search the [AntV gallery](https://infographic.antv.vision/gallery) by template ID. For field definitions, see the [syntax guide](https://infographic.antv.vision/learn/infographic-syntax) and [data reference](https://infographic.antv.vision/learn/data).
 
 ## Template index
 
-| Category · 분류 | Data key | Templates |
+| Category | Data key | Templates |
 | --- | --- | ---: |
-| [Numeric charts · 수치 차트](#chart) | `values` | 11 |
-| [Lists · 목록](#list) | `lists` | 29 |
-| [Sequences · 순서·과정](#sequence) | `sequences` | 83 |
-| [Hierarchies · 계층](#hierarchy) | `root` | 112 |
-| [Comparisons and quadrants · 비교·사분면](#compare) | `compares` | 20 |
-| [Relationships · 관계](#relation) | `nodes + relations` | 18 |
+| [Numeric charts](#chart) | `values` | 11 |
+| [Lists](#list) | `lists` | 29 |
+| [Sequences](#sequence) | `sequences` | 83 |
+| [Hierarchies](#hierarchy) | `root` | 112 |
+| [Comparisons and quadrants](#compare) | `compares` | 20 |
+| [Relationships](#relation) | `nodes + relations` | 18 |
 
-Each example is a complete Markdown block. IDs below it are grouped by their registered layout. · 예제는 Markdown에 넣을 전체 코드 블록입니다. 각 예제 아래에는 등록된 레이아웃별로 템플릿 ID를 모았습니다.
+Each example is a complete Markdown block. IDs below it are grouped by their registered layout.
 
 ## chart
 
-Numeric charts · 수치 차트
-
-Bar · 가로 막대, column · 세로 막대, line · 꺾은선, pie · 원형, donut · 도넛, word cloud · 워드 클라우드.
+Choose a bar, column, line, pie, donut, or word cloud template.
 
 ````markdown
 ```infographic
@@ -73,8 +64,6 @@ data
 - `chart-wordcloud-rotate`
 
 ## list
-
-Lists · 목록
 
 ````markdown
 ```infographic
@@ -141,8 +130,6 @@ data
 
 ## sequence
 
-Sequences · 순서·과정
-
 ````markdown
 ```infographic
 infographic sequence-timeline-simple
@@ -201,7 +188,6 @@ data
 ### sequence-interaction
 
 Each entry in `sequences` is a lane. Give its steps IDs under `children`, then connect two step IDs with a labeled message in `relations`.
-· `sequences`의 각 항목이 레인입니다. 각 레인의 단계를 `children`에 ID와 함께 작성하고, `relations`에서 두 단계의 ID를 메시지로 연결하세요.
 
 ````markdown
 ```infographic
@@ -317,8 +303,6 @@ data
 - `sequence-zigzag-steps-underline-text`
 
 ## hierarchy
-
-Hierarchies · 계층
 
 ````markdown
 ```infographic
@@ -455,8 +439,6 @@ data
 
 ## compare
 
-Comparisons and quadrants · 비교·사분면
-
 ````markdown
 ```infographic
 infographic compare-binary-horizontal-compact-card-vs
@@ -501,8 +483,6 @@ data
 
 ## relation
 
-Relationships · 관계
-
 ````markdown
 ```infographic
 infographic relation-dagre-flow-lr-compact-card
@@ -545,9 +525,9 @@ data
 - `relation-network-icon-badge`
 - `relation-network-simple-circle-node`
 
-## Deprecated aliases · 이전 별칭
+## Deprecated aliases
 
-Use the corresponding `compare-quadrant-*` ID in new documents. · 새 문서에는 오른쪽 ID를 사용하세요.
+Use the corresponding `compare-quadrant-*` ID in new documents.
 
 | Alias | Use |
 | --- | --- |

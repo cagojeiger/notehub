@@ -39,11 +39,9 @@ jobs:
       - name: Check authoring guide examples
         working-directory: docs/guides
         run: |
-          for guide in document-authoring.md document-authoring.ko.md; do
-            for file in README.md flow.d2; do
-              grep -Fq "(examples/request-flow/$file)" "$guide"
-              test -f "examples/request-flow/$file"
-            done
+          for file in README.md flow.d2; do
+            grep -Fq "(examples/request-flow/$file)" document-authoring.md
+            test -f "examples/request-flow/$file"
           done
           grep -Fxq '![Request flow](./flow.d2)' examples/request-flow/README.md
           grep -Fxq '[Open the diagram](./flow.d2)' examples/request-flow/README.md

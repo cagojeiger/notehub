@@ -1,24 +1,19 @@
-# Authoring documents in NoteHub
+# Write documents in NoteHub
 
-[한국어](document-authoring.ko.md)
+Use Markdown for notes, attachments, and inline diagrams. Use a separate D2 file when you want to embed the same diagram in several notes or open it in its own viewer.
 
 ## Contents
 
-- [Markdown authoring guide](#markdown-authoring-guide)
-  - [Write a note](#write-a-note)
-  - [Link documents and folders](#link-documents-and-folders)
-  - [Embed images and audio](#embed-images-and-audio)
-  - [Write Mermaid and Infographic blocks](#write-mermaid-and-infographic-blocks)
-  - [All Mermaid diagram types and official examples](mermaid-diagrams.md)
-  - [Complete Infographic template catalog](infographic-templates.md)
-- [D2 authoring guide](#d2-authoring-guide)
-  - [Supported shapes, connections, layouts and official examples](d2-reference.md)
+- [Write a Markdown note](#write-a-markdown-note)
+- [Link to files and folders](#link-to-files-and-folders)
+- [Embed images and audio](#embed-images-and-audio)
+- [Draw a Mermaid diagram](#draw-a-mermaid-diagram)
+- [Build an infographic](#build-an-infographic)
+- [Embed or open a D2 diagram](#embed-or-open-a-d2-diagram)
 
-## Markdown authoring guide
+## Write a Markdown note
 
-### Write a note
-
-Save the following Markdown as a text document named `notes.md`. The preview shows a heading and a task list. Use `.md` or `.markdown` for notes. Tables and footnotes use GitHub Flavored Markdown syntax.
+Save notes with the extension `.md` or `.markdown`. The preview supports task lists, tables, and footnotes.
 
 ```markdown
 # Meeting notes
@@ -37,7 +32,7 @@ To show document properties, start the file with a YAML mapping between two line
 </details>
 ```
 
-### Link documents and folders
+## Link to files and folders
 
 Use a target such as `daily:/project/README.md` in MCP and CLI commands. Inside Markdown, use paths within the same Space. Resolve `./` and `../` from the document’s folder and `/` from the Space root. Include the exact filename and extension.
 
@@ -48,7 +43,7 @@ In a Space-root `README.md`, these links open the project folder and its README 
 [Project README](./project/README.md)
 ```
 
-### Embed images and audio
+## Embed images and audio
 
 Upload the attachments to the same Space first. If `assets/overview.png` and `recordings/meeting.webm` are under the folder containing your note, put the following source in the note to show the image and audio player. The `audio` block takes one file path on its own line.
 
@@ -60,9 +55,9 @@ Upload the attachments to the same Space first. If `assets/overview.png` and `re
 ```
 ````
 
-### Write Mermaid and Infographic blocks
+## Draw a Mermaid diagram
 
-Include the opening and closing fences in the Markdown document. Use `mermaid` for a flowchart or sequence diagram.
+Start a fenced block with `mermaid`. The first line inside the block selects the diagram type. For example, `flowchart LR` draws a flowchart from left to right.
 
 ````markdown
 ```mermaid
@@ -73,6 +68,8 @@ flowchart LR
 ````
 
 [All Mermaid diagram types, declarations and official examples for this version](mermaid-diagrams.md)
+
+## Build an infographic
 
 Use `infographic` as the fence language and `infographic <template ID>` as the first line inside it. Choose a chart, list, sequence, hierarchy, comparison, or relationship template and use its data key. The bar chart below uses `values`. [All template IDs and examples by category](infographic-templates.md)
 
@@ -94,9 +91,7 @@ data
 ```
 ````
 
-Preview template layouts in the [AntV gallery](https://infographic.antv.vision/gallery). For syntax, see [Mermaid](https://mermaid.js.org/intro/syntax-reference.html) · [AntV Infographic](https://infographic.antv.vision/learn/data)
-
-## D2 authoring guide
+## Embed or open a D2 diagram
 
 Save [flow.d2](examples/request-flow/flow.d2) as a text document. Write the D2 source directly into the file without Markdown fences.
 

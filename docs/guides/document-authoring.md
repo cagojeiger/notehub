@@ -2,15 +2,26 @@
 
 [한국어](document-authoring.ko.md)
 
-Save notes as `.md` or `.markdown` text documents. Write ordinary Markdown by default. Use GitHub Flavored Markdown for tables, task lists, and footnotes. When a diagram helps, choose its format by what it needs to communicate.
+## Contents
 
-| Use case | What to save |
-| --- | --- |
-| Prose, lists, tables, and links | A `.md` text document |
-| A flowchart or sequence inside a note | A `mermaid` fenced block in the `.md` document |
-| A chart or infographic inside a note | An `infographic` fenced block in the `.md` document |
-| A standalone or reusable architecture diagram | A `.d2` text document |
-| A D2 diagram displayed as an image in Markdown | `![Description](./flow.d2)` |
+- [Markdown authoring guide](#markdown-authoring-guide)
+  - [Write a note](#write-a-note)
+  - [Link documents and folders](#link-documents-and-folders)
+  - [Embed images and audio](#embed-images-and-audio)
+  - [Write Mermaid and Infographic blocks](#write-mermaid-and-infographic-blocks)
+- [D2 authoring guide](#d2-authoring-guide)
+
+## Markdown authoring guide
+
+### Write a note
+
+Save the following Markdown as a text document named `notes.md`. The preview shows a heading and a task list. Use `.md` or `.markdown` for notes. Tables and footnotes use GitHub Flavored Markdown syntax.
+
+```markdown
+# Meeting notes
+
+- [ ] Review the proposal.
+```
 
 To show document properties, start the file with a YAML mapping between two lines containing `---`. To add a collapsible section, use the following markup.
 
@@ -23,44 +34,44 @@ To show document properties, start the file with a YAML mapping between two line
 </details>
 ```
 
-## Markdown links and folder landing pages
+### Link documents and folders
 
-Resolve relative links from the folder containing the Markdown document. A path starting with `/` resolves from the root of the same Space. Use the exact names of existing files, including their extensions. Use ordinary Markdown links for in-Space navigation and keep the target path within that Space.
+Use a target such as `daily:/project/README.md` in MCP and CLI commands. Inside Markdown, use paths within the same Space. Resolve `./` and `../` from the document’s folder and `/` from the Space root. Include the exact filename and extension.
+
+In a Space-root `README.md`, these links open the project folder and its README respectively. The web folder view displays the file list and previews its README. Incoming links are counted for the target you link to.
 
 ```markdown
 [Project folder](./project/)
 [Project README](./project/README.md)
-[Space index](/README.md)
-[See the notes](#notes)
+```
+
+### Embed images and audio
+
+Upload the attachments to the same Space first. If `assets/overview.png` and `recordings/meeting.webm` are under the folder containing your note, put the following source in the note to show the image and audio player. The `audio` block takes one file path on its own line.
+
+````markdown
 ![System overview](./assets/overview.png)
-```
 
-Place `README.md` directly inside a folder to give it a landing page. The web folder view opens on the README tab, including at the Space root. Use `[Project folder](./project/)` when readers should land in that folder and see its file list and README. Use `[Project README](./project/README.md)` to open the document directly. Incoming links follow the exact linked target, even when the two views show the same README body.
-
-For a bundle of related materials, use a folder with a README that links to its notes and attachments. Use a single path on its own line in an `audio` block to add a player for an audio file already stored in the same Space.
-
-`````markdown
 ```audio
-./recording.webm
+./recordings/meeting.webm
 ```
-`````
+````
 
-## Mermaid
+### Write Mermaid and Infographic blocks
 
-Put a diagram directly inside the note using a `mermaid` fence.
+Include the opening and closing fences in the Markdown document. Use `mermaid` for a flowchart or sequence diagram.
 
+````markdown
 ```mermaid
 flowchart LR
     Inbox --> Review
     Review --> Archive
 ```
+````
 
-See the [Mermaid syntax reference](https://mermaid.js.org/intro/syntax-reference.html) for other diagram types.
+For a bar chart, use an `infographic` block. Name the template on the first line, then indent the labels and numeric values under `data` as shown.
 
-## AntV Infographic
-
-Use an `infographic` fence. Start with `infographic <template>` and indent the data under `data`. Choose a template that matches the data shape. For a bar chart, use `values` with a label and a numeric value per entry.
-
+````markdown
 ```infographic
 infographic chart-bar-plain-text
 data
@@ -76,17 +87,28 @@ data
     - label Retrospectives
       value 6
 ```
+````
 
-See the [AntV data reference](https://infographic.antv.vision/learn/data) for additional data shapes.
+For more examples, see [Mermaid](https://mermaid.js.org/intro/syntax-reference.html) · [AntV Infographic](https://infographic.antv.vision/learn/data)
 
-## Write and embed a D2 diagram
+## D2 authoring guide
 
-Save [flow.d2](examples/request-flow/flow.d2) as a text document with raw D2 source. Put the [example README.md](examples/request-flow/README.md) in the same folder. In NoteHub, its image displays the rendered SVG and its link opens the standalone diagram.
+Save [flow.d2](examples/request-flow/flow.d2) as a text document. Write the D2 source directly into the file without Markdown fences.
+
+```d2
+client: Browser
+api: NoteHub
+client -> api: Send request
+```
+
+Save [README.md](examples/request-flow/README.md) in the same folder with this content.
 
 ```markdown
+# Request flow
+
 ![Request flow](./flow.d2)
 
 [Open the diagram](./flow.d2)
 ```
 
-Use a fenced `d2` block when showing source code to the reader. Use the image syntax above when showing the diagram. In CLI and MCP commands, address the files as `<space>:/folder/flow.d2` and `<space>:/folder/README.md`. Inside the README, use the relative path.
+The image renders `flow.d2` as SVG inside the note. Clicking the ordinary link opens the same file in the standalone diagram viewer. A fenced `d2` block inside Markdown displays the source code.

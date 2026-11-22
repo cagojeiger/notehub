@@ -6,6 +6,17 @@ NoteHub uses the built-in registry from `@antv/infographic@0.2.20`. Copy an exac
 
 NoteHub가 사용하는 버전은 `@antv/infographic@0.2.20`입니다. 아래 ID를 그대로 복사해 사용하세요. 6개 분류에 템플릿 ID 273개가 있고, 이전 문서와의 호환을 위한 별칭이 3개 더 있습니다.
 
+## Choose a template · 템플릿 선택하기
+
+| What you need · 찾는 정보 | Where to look · 확인할 곳 |
+| --- | --- |
+| Preview the layout · 그림 모양 확인 | [AntV gallery · 공식 갤러리](https://infographic.antv.vision/gallery). Search by template ID. 템플릿 ID로 검색하세요. |
+| Pick an ID supported by NoteHub · 지원 ID 선택 | [NoteHub template index · 분류별 목록](#template-index). Copy the exact ID for the installed version. 현재 버전에 등록된 ID를 복사하세요. |
+| Write the fenced block · 코드 블록 작성 | Follow the example under your category. 각 분류의 예제를 사용하세요. [AntV syntax · 공식 문법](https://infographic.antv.vision/learn/infographic-syntax) |
+| Fill in labels, values, or relationships · 데이터 채우기 | [AntV data reference · 데이터 필드](https://infographic.antv.vision/learn/data) |
+
+## Template index
+
 | Category · 분류 | Data key | Templates |
 | --- | --- | ---: |
 | [Numeric charts · 수치 차트](#chart) | `values` | 11 |

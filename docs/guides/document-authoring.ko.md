@@ -86,7 +86,7 @@ data
 ```
 ````
 
-추가 예제는 다음 문서를 참고하세요. [Mermaid](https://mermaid.js.org/intro/syntax-reference.html) · [AntV Infographic](https://infographic.antv.vision/learn/data)
+템플릿 모양은 [AntV 공식 갤러리](https://infographic.antv.vision/gallery)에서 확인하세요. 문법 참고 자료는 [Mermaid](https://mermaid.js.org/intro/syntax-reference.html) · [AntV Infographic](https://infographic.antv.vision/learn/data)
 
 ## D2 파일 작성 가이드
 

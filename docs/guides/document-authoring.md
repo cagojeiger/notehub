@@ -90,7 +90,7 @@ data
 ```
 ````
 
-For more examples, see [Mermaid](https://mermaid.js.org/intro/syntax-reference.html) · [AntV Infographic](https://infographic.antv.vision/learn/data)
+Preview template layouts in the [AntV gallery](https://infographic.antv.vision/gallery). For syntax, see [Mermaid](https://mermaid.js.org/intro/syntax-reference.html) · [AntV Infographic](https://infographic.antv.vision/learn/data)
 
 ## D2 authoring guide
 

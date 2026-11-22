@@ -9,6 +9,7 @@
   - [문서와 폴더 연결하기](#문서와-폴더-연결하기)
   - [이미지와 음성 넣기](#이미지와-음성-넣기)
   - [Mermaid와 Infographic 작성하기](#mermaid와-infographic-작성하기)
+  - [전체 Mermaid 종류와 공식 예제](mermaid-diagrams.md)
   - [전체 Infographic 템플릿 목록](infographic-templates.md)
 - [D2 파일 작성 가이드](#d2-파일-작성-가이드)
 
@@ -69,6 +70,8 @@ flowchart LR
     Review --> Archive
 ```
 ````
+
+[현재 버전의 전체 Mermaid 종류·선언·공식 예제](mermaid-diagrams.md)
 
 코드 펜스의 언어는 `infographic`이고 블록 안의 첫 줄은 `infographic <템플릿 ID>`입니다. 수치 차트, 목록, 순서, 계층, 비교, 관계 중에서 분류를 고르고 해당 템플릿의 데이터 키를 사용합니다. 아래 막대 차트는 `values`를 사용합니다. [전체 ID 및 분류별 작성 예제](infographic-templates.md)
 

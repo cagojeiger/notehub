@@ -9,6 +9,7 @@
   - [Link documents and folders](#link-documents-and-folders)
   - [Embed images and audio](#embed-images-and-audio)
   - [Write Mermaid and Infographic blocks](#write-mermaid-and-infographic-blocks)
+  - [All Mermaid diagram types and official examples](mermaid-diagrams.md)
   - [Complete Infographic template catalog](infographic-templates.md)
 - [D2 authoring guide](#d2-authoring-guide)
 
@@ -69,6 +70,8 @@ flowchart LR
     Review --> Archive
 ```
 ````
+
+[All Mermaid diagram types, declarations and official examples for this version](mermaid-diagrams.md)
 
 Use `infographic` as the fence language and `infographic <template ID>` as the first line inside it. Choose a chart, list, sequence, hierarchy, comparison, or relationship template and use its data key. The bar chart below uses `values`. [All template IDs and examples by category](infographic-templates.md)
 

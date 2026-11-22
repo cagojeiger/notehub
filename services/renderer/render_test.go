@@ -14,8 +14,11 @@ import (
 )
 
 func TestRenderDiagram(t *testing.T) {
-	const source = "client: Browser\napi: NoteHub\nclient -> api"
-	response := postDiagram(newHandler(renderD2, renderTimeout), source, "text/plain; charset=utf-8")
+	source, err := os.ReadFile("../../docs/guides/examples/request-flow/flow.d2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	response := postDiagram(newHandler(renderD2, renderTimeout), string(source), "text/plain; charset=utf-8")
 	if response.Code != http.StatusOK || response.Header().Get("Content-Type") != "image/svg+xml" {
 		t.Fatalf("status = %d, content type = %q", response.Code, response.Header().Get("Content-Type"))
 	}

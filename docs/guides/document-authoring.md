@@ -1,6 +1,8 @@
 # Authoring documents in NoteHub
 
-Save notes and folder landing pages as `.md` text documents. Write ordinary Markdown by default. Use GitHub Flavored Markdown for tables, task lists, and footnotes. When a diagram helps, choose its format by what it needs to communicate.
+[한국어](document-authoring.ko.md)
+
+Save notes as `.md` or `.markdown` text documents. Write ordinary Markdown by default. Use GitHub Flavored Markdown for tables, task lists, and footnotes. When a diagram helps, choose its format by what it needs to communicate.
 
 | Use case | What to save |
 | --- | --- |
@@ -8,7 +10,18 @@ Save notes and folder landing pages as `.md` text documents. Write ordinary Mark
 | A flowchart or sequence inside a note | A `mermaid` fenced block in the `.md` document |
 | A chart or infographic inside a note | An `infographic` fenced block in the `.md` document |
 | A standalone or reusable architecture diagram | A `.d2` text document |
-| A D2 diagram displayed as an image in Markdown | `![Description](./architecture.d2)` |
+| A D2 diagram displayed as an image in Markdown | `![Description](./flow.d2)` |
+
+To show document properties, start the file with a YAML mapping between two lines containing `---`. To add a collapsible section, use the following markup.
+
+```markdown
+<details>
+<summary>Meeting notes</summary>
+
+- Review the proposal.
+
+</details>
+```
 
 ## Markdown links and folder landing pages
 
@@ -66,30 +79,14 @@ data
 
 See the [AntV data reference](https://infographic.antv.vision/learn/data) for additional data shapes.
 
-## D2 files and SVG embedding in Markdown
+## Write and embed a D2 diagram
 
-Save the D2 source as a separate text document named `architecture.d2`. Put the source directly in the file without Markdown fences.
-
-```d2
-client: Client
-api: NoteHub API
-db: Database
-
-client -> api: HTTPS
-api -> db: Read and write
-```
-
-To embed the diagram as an image, point Markdown image syntax at the original `.d2` document in the same Space. NoteHub reads the D2 source and renders it to SVG for the preview. Save the `.d2` text document before adding the reference.
+Save [flow.d2](examples/request-flow/flow.d2) as a text document with raw D2 source. Put the [example README.md](examples/request-flow/README.md) in the same folder. In NoteHub, its image displays the rendered SVG and its link opens the standalone diagram.
 
 ```markdown
-![NoteHub architecture](./architecture.d2)
+![Request flow](./flow.d2)
+
+[Open the diagram](./flow.d2)
 ```
 
-The leading `!` selects the inline image. A regular link such as `[Open the diagram](./architecture.d2)` opens the standalone D2 viewer. Both use the saved D2 source. If embedded rendering fails, the Markdown viewer shows an image placeholder. See the [D2 language guide](https://d2lang.com/tour/intro/) for more syntax.
-
-## Preview and verification
-
-- Use the web preview to verify that the Markdown, links, and diagrams display as intended.
-- MCP Apps can display standalone and embedded D2 when rendering is available. Mermaid and Infographic require the host to support the isolated diagram renderer. The viewer can show the source if that renderer is unavailable.
-- The CLI and MCP text tools work with the saved source. Use the existing text write operation for both `.md` and `.d2` files. Store image and audio attachments as files in the same Space and link to those paths.
-- MCP and CLI command targets use `<space>:/absolute/path`, such as `daily:/project/README.md`. Inside a Markdown document, use `./architecture.d2` or a Space-root path such as `/project/architecture.d2`.
+Use a fenced `d2` block when showing source code to the reader. Use the image syntax above when showing the diagram. In CLI and MCP commands, address the files as `<space>:/folder/flow.d2` and `<space>:/folder/README.md`. Inside the README, use the relative path.

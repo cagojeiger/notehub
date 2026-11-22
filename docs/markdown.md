@@ -7,7 +7,8 @@ Save notes and folder landing pages as `.md` text documents. Write ordinary Mark
 | Prose, lists, tables, and links | A `.md` text document |
 | A flowchart or sequence inside a note | A `mermaid` fenced block in the `.md` document |
 | A chart or infographic inside a note | An `infographic` fenced block in the `.md` document |
-| A standalone or reusable architecture diagram | A `.d2` text document, optionally embedded in Markdown |
+| A standalone or reusable architecture diagram | A `.d2` text document |
+| A D2 diagram displayed as an image in Markdown | `![Description](./architecture.d2)` |
 
 ## Markdown links and folder landing pages
 
@@ -65,7 +66,7 @@ data
 
 See the [AntV data reference](https://infographic.antv.vision/learn/data) for additional data shapes.
 
-## D2
+## D2 files and SVG embedding in Markdown
 
 Save the D2 source as a separate text document named `architecture.d2`. Put the source directly in the file without Markdown fences.
 
@@ -78,13 +79,13 @@ client -> api: HTTPS
 api -> db: Read and write
 ```
 
-To embed the rendered SVG, reference the original D2 document with Markdown image syntax.
+To embed the diagram as an image, point Markdown image syntax at the original `.d2` document in the same Space. NoteHub reads the D2 source and renders it to SVG for the preview. Save the `.d2` text document before adding the reference.
 
 ```markdown
 ![NoteHub architecture](./architecture.d2)
 ```
 
-Use `[Open the diagram](./architecture.d2)` to open the standalone diagram. NoteHub uses its configured D2 renderer for the SVG preview. See the [D2 language guide](https://d2lang.com/tour/intro/) for more syntax.
+The leading `!` selects the inline image. A regular link such as `[Open the diagram](./architecture.d2)` opens the standalone D2 viewer. Both use the saved D2 source. If embedded rendering fails, the Markdown viewer shows an image placeholder. See the [D2 language guide](https://d2lang.com/tour/intro/) for more syntax.
 
 ## Preview and verification
 

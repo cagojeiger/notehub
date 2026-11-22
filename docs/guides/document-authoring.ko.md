@@ -12,6 +12,7 @@
   - [전체 Mermaid 종류와 공식 예제](mermaid-diagrams.md)
   - [전체 Infographic 템플릿 목록](infographic-templates.md)
 - [D2 파일 작성 가이드](#d2-파일-작성-가이드)
+  - [지원 도형·연결선·레이아웃과 공식 예제](d2-reference.md)
 
 ## Markdown 파일 작성 가이드
 
@@ -112,3 +113,5 @@ client -> api: Send request
 ```
 
 이미지 문법은 노트 안에 `flow.d2`를 SVG로 표시합니다. 일반 링크를 클릭하면 같은 파일을 독립 다이어그램 뷰어에서 엽니다. Markdown 안의 `d2` 코드 블록은 소스 코드를 표시합니다.
+
+[지원 도형·연결선·레이아웃과 공식 예제](d2-reference.md)

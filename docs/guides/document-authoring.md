@@ -12,6 +12,7 @@
   - [All Mermaid diagram types and official examples](mermaid-diagrams.md)
   - [Complete Infographic template catalog](infographic-templates.md)
 - [D2 authoring guide](#d2-authoring-guide)
+  - [Supported shapes, connections, layouts and official examples](d2-reference.md)
 
 ## Markdown authoring guide
 
@@ -116,3 +117,5 @@ Save [README.md](examples/request-flow/README.md) in the same folder with this c
 ```
 
 The image renders `flow.d2` as SVG inside the note. Clicking the ordinary link opens the same file in the standalone diagram viewer. A fenced `d2` block inside Markdown displays the source code.
+
+[Supported shapes, connections, layouts and official examples](d2-reference.md)

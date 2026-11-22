@@ -39,12 +39,8 @@ jobs:
       - name: Check authoring guide examples
         working-directory: docs/guides
         run: |
-          for file in README.md flow.d2; do
-            grep -Fq "(examples/request-flow/$file)" document-authoring.md
-            test -f "examples/request-flow/$file"
-          done
-          grep -Fxq '![Request flow](./flow.d2)' examples/request-flow/README.md
-          grep -Fxq '[Open the diagram](./flow.d2)' examples/request-flow/README.md
+          grep -Fxq '![Request flow](./flow.d2)' document-authoring.md
+          grep -Fxq '[Open the diagram](./flow.d2)' document-authoring.md
       - name: Check Go
         run: |
           test -z "$(gofmt -l .)"

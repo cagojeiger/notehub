@@ -47,7 +47,7 @@ In a Space-root `README.md`, these links open the project folder and its README 
 
 ### Embed or open a D2 diagram
 
-With [flow.d2](examples/request-flow/flow.d2) beside your note, use image syntax to render the diagram as SVG or a regular link to open its viewer. The [example README](examples/request-flow/README.md) shows both forms.
+With `flow.d2` beside your note, use image syntax to render the diagram as SVG or a regular link to open its viewer.
 
 ```markdown
 # Request flow
@@ -731,7 +731,7 @@ Use the corresponding `compare-quadrant-*` ID in new documents.
 
 ## D2 reference
 
-Save [flow.d2](examples/request-flow/flow.d2) as a text document. Write the D2 source directly into the file without Markdown fences.
+Save this source as `flow.d2` in the same folder as your Markdown note. Omit the Markdown fences.
 
 ```d2
 client: Browser
@@ -739,7 +739,7 @@ api: NoteHub
 client -> api: Send request
 ```
 
-Write raw D2 in a `.d2` text document. This reference covers NoteHub renderer **0.1.1**, D2 **0.9.0**, and the **Dagre** layout engine. File imports are disabled. [Renderer configuration](../../services/renderer/render.go) · [D2 dependency](../../services/renderer/go.mod)
+This reference covers NoteHub renderer **0.1.1**, D2 **0.9.0**, and the **Dagre** layout engine. File imports are disabled. [Renderer configuration](../../services/renderer/render.go) · [D2 dependency](../../services/renderer/go.mod)
 
 - [Shapes](#shapes)
 - [Connections and arrowheads](#connections)
@@ -817,5 +817,3 @@ services: {
   db.shape: cylinder
 }
 ```
-
-For a complete Markdown document embedding a diagram, see the [example README](examples/request-flow/README.md) and its [D2 source](examples/request-flow/flow.d2).

@@ -8,17 +8,22 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
 )
 
 func TestRenderDiagram(t *testing.T) {
-	source, err := os.ReadFile("../../docs/guides/examples/request-flow/flow.d2")
+	guide, err := os.ReadFile("../../docs/guides/document-authoring.md")
 	if err != nil {
 		t.Fatal(err)
 	}
-	response := postDiagram(newHandler(renderD2, renderTimeout), string(source), "text/plain; charset=utf-8")
+	block := regexp.MustCompile("(?ms)^## D2 reference\n[^#]*?^```d2\n(.*?)\n```$").FindSubmatch(guide)
+	if block == nil {
+		t.Fatal("missing flow.d2 example in the Markdown guide")
+	}
+	response := postDiagram(newHandler(renderD2, renderTimeout), string(block[1]), "text/plain; charset=utf-8")
 	if response.Code != http.StatusOK || response.Header().Get("Content-Type") != "image/svg+xml" {
 		t.Fatalf("status = %d, content type = %q", response.Code, response.Header().Get("Content-Type"))
 	}

@@ -15,7 +15,7 @@ import (
 )
 
 func TestRenderDiagram(t *testing.T) {
-	guide, err := os.ReadFile("markdown-guide.md")
+	guide, err := os.ReadFile("../../docs/guides/document-authoring.md")
 	if err != nil {
 		t.Fatal(err)
 	}

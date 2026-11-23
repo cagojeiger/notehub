@@ -1,0 +1,66 @@
+name: NoteHub Quick release
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: desktop-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: macos-15
+    timeout-minutes: 20
+    environment: desktop-release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - id: core
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
+        with:
+          client-id: ${{ vars.CORE_READ_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CORE_READ_APP_PRIVATE_KEY }}
+          owner: cagojeiger
+          repositories: notehub-core
+          permission-contents: read
+      - name: Resolve latest desktop change on main
+        id: source
+        env:
+          GH_TOKEN: ${{ steps.core.outputs.token }}
+        run: |
+          sha=$(gh api 'repos/cagojeiger/notehub-core/commits?sha=main&path=apps/desktop&per_page=1' --jq '.[0].sha')
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - name: Checkout desktop source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: cagojeiger/notehub-core
+          ref: ${{ steps.source.outputs.sha }}
+          token: ${{ steps.core.outputs.token }}
+          path: core
+          sparse-checkout: apps/desktop
+          persist-credentials: false
+      - name: Verify installation and signed update before packaging
+        run: core/apps/desktop/test-update.sh > "$RUNNER_TEMP/desktop-test.log" 2>&1
+      - name: Package and sign update
+        env:
+          BAR_SIGNING_KEY: ${{ secrets.BAR_SIGNING_KEY }}
+        run: |
+          : "${BAR_SIGNING_KEY:?Configure the desktop-release environment signing key}"
+          version=$(cat core/apps/desktop/VERSION)
+          core/apps/desktop/build.sh "$RUNNER_TEMP/bar"
+          mkdir "$RUNNER_TEMP/feed"
+          mv "$RUNNER_TEMP/bar/NoteHub-Quick-$version.dmg" "$RUNNER_TEMP/feed/"
+          printf '%s' "$BAR_SIGNING_KEY" | "$RUNNER_TEMP/bar/sdk/bin/generate_appcast" \
+            --ed-key-file - --maximum-deltas 0 \
+            --download-url-prefix "https://github.com/$GITHUB_REPOSITORY/releases/download/quick-v$version/" "$RUNNER_TEMP/feed"
+      - name: Publish installer then update feed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/publish-desktop.sh

@@ -4,7 +4,7 @@ NoteHub is a workspace for organizing, editing, and searching notes and document
 
 ## Documentation
 
-- [NoteHub Markdown Guide](services/renderer/markdown-guide.md)
+- [NoteHub Markdown Guide](docs/guides/document-authoring.md)
 
 ## Services
 

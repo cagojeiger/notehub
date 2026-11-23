@@ -5,14 +5,12 @@ on:
     branches: [main]
     paths:
       - 'services/renderer/**'
-      - 'docs/guides/**'
       - '.github/workflows/renderer-ci.yml'
       - '.github/workflows/renderer-release.yml'
   push:
     branches: [main]
     paths:
       - 'services/renderer/**'
-      - 'docs/guides/**'
       - '.github/workflows/renderer-ci.yml'
       - '.github/workflows/renderer-release.yml'
   workflow_dispatch:
@@ -37,10 +35,9 @@ jobs:
           go-version-file: services/renderer/go.mod
           cache-dependency-path: services/renderer/go.sum
       - name: Check authoring guide examples
-        working-directory: docs/guides
         run: |
-          grep -Fxq '![Request flow](./flow.d2)' document-authoring.md
-          grep -Fxq '[Open the diagram](./flow.d2)' document-authoring.md
+          grep -Fxq '![Request flow](./flow.d2)' markdown-guide.md
+          grep -Fxq '[Open the diagram](./flow.d2)' markdown-guide.md
       - name: Check Go
         run: |
           test -z "$(gofmt -l .)"

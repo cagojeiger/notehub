@@ -739,7 +739,7 @@ api: NoteHub
 client -> api: Send request
 ```
 
-This reference covers NoteHub renderer **0.1.1**, D2 **0.9.0**, and the **Dagre** layout engine. File imports are disabled. [Renderer configuration](../../services/renderer/render.go) · [D2 dependency](../../services/renderer/go.mod)
+This reference covers NoteHub renderer **0.1.1**, D2 **0.9.0**, and the **Dagre** layout engine. File imports are disabled. [Renderer configuration](render.go) · [D2 dependency](go.mod)
 
 - [Shapes](#shapes)
 - [Connections and arrowheads](#connections)

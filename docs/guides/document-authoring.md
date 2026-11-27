@@ -5,6 +5,7 @@ Write notes in Markdown, embed files from your Space, and add diagrams with Merm
 ## Contents
 
 - [Write a Markdown note](#write-a-markdown-note)
+- [Write LaTeX equations](#write-latex-equations)
 - [Link to files and folders](#link-to-files-and-folders)
 - [Images, diagrams, and audio](#images-diagrams-and-audio)
 - [Draw a Mermaid diagram](#draw-a-mermaid-diagram)
@@ -30,6 +31,18 @@ To show document properties, start the file with a YAML mapping between two line
 - Review the proposal.
 
 </details>
+```
+
+## Write LaTeX equations
+
+Use `$...$` for an inline equation. For a displayed equation, put the opening and closing `$$` on their own lines. Escape a literal dollar sign as `\$` when writing prices alongside equations.
+
+```markdown
+The price is \$15 and the quantity is $n$.
+
+$$
+\frac{a}{b} + c
+$$
 ```
 
 ## Link to files and folders

@@ -1,6 +1,6 @@
 # NoteHub Markdown Guide
 
-Write notes in Markdown, embed files from your Space, and embed Mermaid and linked D2 diagrams, and compose visual blocks with OpenUI.
+Write notes in Markdown and embed files from your Space. Use Mermaid and D2 for diagrams, or OpenUI to combine cards and charts in one block.
 
 ## Contents
 
@@ -100,8 +100,21 @@ flowchart LR
 
 ## Compose an OpenUI block
 
-Use an `openui` fence to arrange cards, captions, charts, and drawings. Start with `root = Col([...])`. This example binds a slider to a percentage. The value starts at 70 whenever the block is opened and prints at that initial value.
+Copy the whole example, including the opening and closing fences, into a Markdown note. Start the block with `root = Col([...])`, then define the cards, labels, or charts it should contain. Open the note in Preview to see the result.
 
+### Show a chart
+
+````markdown
+```openui
+root = Col([Card([Title("Notes per week"), chart])])
+chart = Chart("bar", data, "week", ["notes"])
+data = [{week: "Week 1", notes: 12}, {week: "Week 2", notes: 18}, {week: "Week 3", notes: 15}]
+```
+````
+
+### Bind a slider to a value
+
+````markdown
 ```openui
 root = Col([Card([Title("Budget split"), company, personal, slider])])
 company = Caption("Company " + $share + "%")
@@ -109,10 +122,20 @@ personal = Caption("Personal " + (100 - $share) + "%")
 slider = Slider($share, 0, 100, 1, "Company share", "%")
 $share = 70
 ```
+````
 
-Available components include `Col`, `Row`, `Grid`, `Box`, `Card`, `Divider`, `Spacer`, `Title`, `Caption`, `Label`, `Badge`, `Chart`, `Slider`, and `Svg` with `G`, `Rect`, `Circle`, `Line`, `Path`, and `SvgText`. The block runs inside an isolated frame. Forms, tool calls, and external media are outside the document catalog. See the [OpenUI Lang specification](https://www.openui.com/docs/openui-lang/specification) for language syntax.
+Moving the slider updates both percentages in the preview. To change the starting value in the saved note and its PDF, edit `$share = 70` in the source.
 
-Existing `infographic` blocks display as copyable source code.
+### Components available in NoteHub
+
+| Purpose | Components |
+| --- | --- |
+| Layout | `Col`, `Row`, `Grid`, `Box`, `Card`, `Divider`, `Spacer` |
+| Text | `Title`, `Caption`, `Label`, `Badge` |
+| Charts and drawings | `Chart`, `Svg`, `G`, `Rect`, `Circle`, `Line`, `Path`, `SvgText` |
+| Interaction | `Slider` |
+
+When asking an AI to write a block, give it one of the examples and ask it to use the components listed here. NoteHub runs the block in an isolated frame. Forms, tool calls, and external media are outside the document catalog. If the block cannot render, NoteHub shows its source so you can copy or edit it. Existing `infographic` blocks also display as copyable source code. [OpenUI Lang specification](https://www.openui.com/docs/openui-lang/specification)
 
 ## Mermaid diagram reference
 

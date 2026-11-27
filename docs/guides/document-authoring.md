@@ -106,8 +106,9 @@ Copy the whole example, including the opening and closing fences, into a Markdow
 
 ````markdown
 ```openui
-root = Col([Card([Title("Notes per week"), chart])])
+root = Col([Card([Title("Notes per week"), chart, summary])])
 chart = Chart("bar", data, "week", ["notes"])
+summary = Caption("Week 1 had 12 notes, week 2 had 18, and week 3 had 15.")
 data = [{week: "Week 1", notes: 12}, {week: "Week 2", notes: 18}, {week: "Week 3", notes: 15}]
 ```
 ````
